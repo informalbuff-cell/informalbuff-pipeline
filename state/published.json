@@ -16,6 +16,23 @@
           "skipped": "instagram not configured"
         }
       }
+    },
+    "seven-year-old-boy-pulled-alive-from-rubble-14-hours-after-russian-strike-on-kyiv-suburb": {
+      "posted_at": "2026-11-23T18:21:59.829Z",
+      "results": {
+        "telegram": {
+          "skipped": "telegram not configured"
+        },
+        "x": {
+          "skipped": "x not configured"
+        },
+        "facebook": {
+          "skipped": "facebook not configured"
+        },
+        "instagram": {
+          "skipped": "instagram not configured"
+        }
+      }
     }
   }
 }
