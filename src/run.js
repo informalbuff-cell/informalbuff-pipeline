@@ -5,7 +5,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { DRY_RUN, LIMIT } from './config.js';
+import { DRY_RUN, LIMIT, telegram as telegramCfg, x as xCfg, meta as metaCfg } from './config.js';
 import { recentArticles } from './site.js';
 import { buildPack, articleUrl } from './copy.js';
 import { cardUrl, portraitCard } from './cards.js';
@@ -28,7 +28,16 @@ async function saveState(state) {
   await fs.writeFile(STATE_FILE, JSON.stringify(state, null, 2) + '\n');
 }
 
+function anyPlatformEnabled() {
+  return telegramCfg.enabled || xCfg.enabled || metaCfg.enabled || metaCfg.igEnabled;
+}
+
 async function main() {
+  if (!DRY_RUN && !anyPlatformEnabled()) {
+    console.log('no platform credentials configured — nothing to do');
+    return;
+  }
+
   const state = await loadState();
   const articles = await recentArticles(40);
   const pending = articles.filter((a) => !state.articles[a.slug]).slice(0, LIMIT);
@@ -72,6 +81,14 @@ async function main() {
     await run('x', () => x.post(article, pack, card));
     await run('facebook', () => postFacebook(article, pack, link));
     await run('instagram', () => postInstagram(article, pack, igCard));
+
+    // Only record the article as handled when something actually published.
+    // A run with every platform skipped must not consume the story.
+    const published = Object.values(results).some((r) => r && r.ok);
+    if (!published) {
+      console.log('nothing published for this article — leaving it for the next run');
+      continue;
+    }
 
     state.articles[article.slug] = { posted_at: new Date().toISOString(), results };
     await saveState(state);
