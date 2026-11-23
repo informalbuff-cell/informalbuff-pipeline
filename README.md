@@ -53,4 +53,5 @@ Prints the article it selected and every payload it would send. No network write
 
 - Never invent facts. Copy is assembled from the article's own fields; the LLM step may rephrase, never add.
 - One post per platform per article, recorded in `state/published.json` so a rerun cannot double-post.
+- Instagram publishes first. Meta mirrors that post onto the Facebook Page by itself; if the mirror appears within a minute the pipeline skips its own Facebook post, so a story never lands twice. If no mirror appears, the pipeline posts to Facebook itself.
 - Every platform call is idempotent-guarded by that state file, and failures are reported, not retried blindly.

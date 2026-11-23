@@ -11,7 +11,7 @@ import { buildPack, articleUrl } from './copy.js';
 import { cardUrl, portraitCard } from './cards.js';
 import * as telegram from './platforms/telegram.js';
 import * as x from './platforms/x.js';
-import { postFacebook, postInstagram } from './platforms/meta.js';
+import { postFacebook, postInstagram, hasMirrorSince } from './platforms/meta.js';
 
 const STATE_FILE = path.join(process.cwd(), 'state', 'published.json');
 
@@ -77,10 +77,27 @@ async function main() {
       }
     };
 
+    const startedAt = Date.now();
+
     await run('telegram', () => telegram.post(article, pack, card));
     await run('x', () => x.post(article, pack, card));
-    await run('facebook', () => postFacebook(article, pack, link));
+
+    // Instagram first: Meta mirrors the post onto the Page by itself. Give the
+    // mirror a moment, then only post to Facebook when it did not appear.
     await run('instagram', () => postInstagram(article, pack, igCard));
+
+    if (results.instagram?.ok && metaCfg.enabled) {
+      await new Promise((resolve) => setTimeout(resolve, 45_000));
+      const mirrored = await hasMirrorSince(startedAt).catch(() => false);
+      if (mirrored) {
+        results.facebook = { skipped: 'covered by the Instagram mirror' };
+        console.log('facebook: skipped — Instagram mirror already on the Page');
+      } else {
+        await run('facebook', () => postFacebook(article, pack, link));
+      }
+    } else {
+      await run('facebook', () => postFacebook(article, pack, link));
+    }
 
     // Only record the article as handled when something actually published.
     // A run with every platform skipped must not consume the story.

@@ -41,3 +41,23 @@ export async function postInstagram(article, pack, card) {
   const published = await graph(`${meta.igUserId}/media_publish`, { creation_id: container.id }, meta.pageToken);
   return { ok: true, id: published.id };
 }
+
+/**
+ * Instagram copies itself onto the linked Page as a caption-less image post.
+ * That copy is not ours to delete, so instead we detect it and skip our own
+ * Facebook post — one story, one Facebook entry either way.
+ */
+export async function hasMirrorSince(sinceMs) {
+  if (!meta.enabled) return false;
+
+  const list = await fetch(
+    `${GRAPH}/${meta.pageId}/posts?limit=6&fields=id,created_time,message&access_token=${meta.pageToken}`,
+  ).then((r) => r.json());
+
+  return (list.data || []).some((post) => {
+    const created = Date.parse(post.created_time);
+    const recent = Number.isFinite(created) && created >= sinceMs - 120_000;
+    const blank = !post.message || !post.message.trim();
+    return recent && blank;
+  });
+}
