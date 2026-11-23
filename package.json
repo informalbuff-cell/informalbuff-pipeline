@@ -1,0 +1,12 @@
+{
+  "name": "informalbuff-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Automated multi-platform publishing for InformalBuff",
+  "scripts": {
+    "dry": "node src/run.js --dry-run",
+    "publish": "node src/run.js"
+  },
+  "engines": { "node": ">=20" }
+}

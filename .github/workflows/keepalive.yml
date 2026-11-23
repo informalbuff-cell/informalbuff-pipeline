@@ -1,0 +1,26 @@
+name: keepalive
+
+# GitHub disables scheduled workflows after 60 days without repository activity.
+# A monthly no-op commit keeps the publish cron alive.
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Touch keepalive file
+        run: |
+          git config user.name "informalbuff-bot"
+          git config user.email "bot@informalbuff.com"
+          date -u +%FT%TZ > .keepalive
+          git add .keepalive
+          git commit -m "chore: keepalive $(date -u +%F)" || echo "nothing to commit"
+          git push
