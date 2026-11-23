@@ -1,3 +1,21 @@
 {
-  "articles": {}
+  "articles": {
+    "notable-capital-gic-baillie-gifford-bet-6b-on-anthropic-before-record-81b-ipo": {
+      "posted_at": "2026-11-23T17:03:49.115Z",
+      "results": {
+        "telegram": {
+          "skipped": "telegram not configured"
+        },
+        "x": {
+          "skipped": "x not configured"
+        },
+        "facebook": {
+          "skipped": "facebook not configured"
+        },
+        "instagram": {
+          "skipped": "instagram not configured"
+        }
+      }
+    }
+  }
 }
