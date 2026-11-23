@@ -111,6 +111,25 @@
           "id": "1412491965285084_122103214587554832"
         }
       }
+    },
+    "togetherai-discloses-prompt-leakage-affecting-serverless-inference-users-in-junejuly-2026": {
+      "posted_at": "2026-11-23T23:49:00.220Z",
+      "results": {
+        "telegram": {
+          "skipped": "telegram not configured"
+        },
+        "x": {
+          "skipped": "x not configured"
+        },
+        "instagram": {
+          "ok": true,
+          "id": "18136505983761827"
+        },
+        "facebook": {
+          "ok": true,
+          "id": "1412491965285084_122103244077554832"
+        }
+      }
     }
   }
 }
