@@ -8,7 +8,7 @@ import path from 'node:path';
 import { DRY_RUN, LIMIT } from './config.js';
 import { recentArticles } from './site.js';
 import { buildPack, articleUrl } from './copy.js';
-import { cardUrl } from './cards.js';
+import { cardUrl, portraitCard } from './cards.js';
 import * as telegram from './platforms/telegram.js';
 import * as x from './platforms/x.js';
 import { postFacebook, postInstagram } from './platforms/meta.js';
@@ -41,10 +41,14 @@ async function main() {
   for (const article of pending) {
     const pack = await buildPack(article);
     const link = articleUrl(article.slug);
-    const card = cardUrl({ imageUrl: article.image_url, headline: article.title || article.meta_title });
+    const headline = article.title || article.meta_title;
+    const card = cardUrl({ imageUrl: article.image_url, headline });
+    // Instagram fills more of the screen at 4:5 than at 1.91:1.
+    const igCard = portraitCard({ imageUrl: article.image_url, headline });
 
     console.log(`\n=== ${article.slug}`);
     console.log(`card: ${card}`);
+    console.log(`ig card: ${igCard}`);
     console.log(`telegram: ${pack.telegram.replace(/\n/g, ' | ').slice(0, 160)}`);
     console.log(`x: ${pack.x.replace(/\n/g, ' | ').slice(0, 160)}`);
 
@@ -67,7 +71,7 @@ async function main() {
     await run('telegram', () => telegram.post(article, pack, card));
     await run('x', () => x.post(article, pack, card));
     await run('facebook', () => postFacebook(article, pack, link));
-    await run('instagram', () => postInstagram(article, pack, card));
+    await run('instagram', () => postInstagram(article, pack, igCard));
 
     state.articles[article.slug] = { posted_at: new Date().toISOString(), results };
     await saveState(state);

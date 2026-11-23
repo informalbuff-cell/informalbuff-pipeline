@@ -1,0 +1,55 @@
+name: token-check
+
+# Verifies the Meta Page token monthly (and on demand) so an expired or revoked
+# token fails a scheduled run instead of going quiet. GitHub emails the repo
+# owner when a scheduled workflow fails.
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Page token valid and has publish scopes
+        env:
+          PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          PAGE_ID: ${{ secrets.META_PAGE_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PAGE_TOKEN:-}" ]; then
+            echo "META_PAGE_TOKEN is not set"; exit 1
+          fi
+
+          json=$(curl -sS -G "https://graph.facebook.com/v21.0/debug_token" \
+            --data-urlencode "input_token=$PAGE_TOKEN" \
+            --data-urlencode "access_token=$PAGE_TOKEN")
+
+          echo "$json" | head -c 600; echo
+
+          python3 - "$json" <<'PY'
+          import json, sys
+          payload = json.loads(sys.argv[1])
+          if 'error' in payload:
+              sys.exit(f"token error: {payload['error'].get('message')}")
+          data = payload.get('data', {})
+          if not data.get('is_valid'):
+              sys.exit('token is not valid — re-authorise at /meta/callback')
+          scopes = set(data.get('scopes') or [])
+          missing = {'pages_manage_posts', 'instagram_content_publish'} - scopes
+          if missing:
+              sys.exit(f"missing scopes: {', '.join(sorted(missing))}")
+          print(f"ok: app {data.get('app_id')}, expires {data.get('expires_at')}")
+          PY
+
+      - name: Page reachable
+        env:
+          PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          PAGE_ID: ${{ secrets.META_PAGE_ID }}
+        run: |
+          set -euo pipefail
+          curl -sS -G "https://graph.facebook.com/v21.0/${PAGE_ID}" \
+            --data-urlencode "fields=id,name,instagram_business_account" \
+            --data-urlencode "access_token=${PAGE_TOKEN}" | head -c 400; echo
