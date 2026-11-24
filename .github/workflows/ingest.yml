@@ -47,12 +47,16 @@ jobs:
           # sweep stays hourly. Keeps private-repo Action minutes under budget.
           REM=$((10#$HOUR % 4))
           if [ "$REM" != "0" ]; then echo "hour $HOUR — sweep only, no writing"; exit 0; fi
-          code=$(curl -s -o write.json -w "%{http_code}" \
-            -H "x-ingest-key: $INGEST_API_KEY" \
-            "$SITE_URL/api/cron/write?limit=21&perDesk=3")
-          head -c 1500 write.json; echo
-          if [ "$code" = "503" ]; then echo "writer not configured (AI key missing) — nothing published"; exit 0; fi
-          test "$code" = "200"
+          # Vercel Hobby kills a function at 60s, so each call writes at most two
+          # stories. Four calls per writing cycle keeps each well inside that.
+          for i in 1 2 3 4; do
+            code=$(curl -s -o write.json -w "%{http_code}" \
+              -H "x-ingest-key: $INGEST_API_KEY" \
+              "$SITE_URL/api/cron/write?limit=2&perDesk=1")
+            head -c 600 write.json; echo
+            if [ "$code" = "503" ]; then echo "writer not configured — nothing published"; exit 0; fi
+            if [ "$code" != "200" ]; then echo "write call $i returned $code"; break; fi
+          done
 
       # Scheduled workflows with sparse crons are unreliable on GitHub, so the
       # pushes ride on this hourly job instead of their own schedule.
