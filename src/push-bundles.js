@@ -148,7 +148,6 @@ async function pushTelegram(desk, data) {
   return { ok: true, messages: json.result?.length ?? 0 }
 }
 
-const results = []
 
 async function pushSignature() {
   const res = await fetch(`${SITE}/api/bundle?signature=morning&limit=10&platform=instagram&edition=${edition}`, {
@@ -206,32 +205,83 @@ async function pushSignature() {
   return { signature: true, count: images.length, igId, fbId, telegram: tg }
 }
 
-const targets = SIGNATURE ? ['__signature__'] : DESKS.slice(0, MAX_DESKS)
-for (const desk of targets) {
-  if (desk === '__signature__') {
-    try {
-      results.push(await pushSignature())
-    } catch (err) {
-      results.push({ signature: true, error: String(err).slice(0, 200) })
-      console.error(`signature FAILED ${err}`)
-    }
-    continue
-  }
-  try {
-    const pushed = await pushDesk(desk)
-    if (!pushed.skipped) {
-      try {
-        const data = await bundle(desk)
-        pushed.telegram = await pushTelegram(desk, data)
-      } catch (err) {
-        pushed.telegram = { error: String(err).slice(0, 120) }
+async function pushMixed() {
+  const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=10&platform=instagram&edition=${edition}`, {
+    headers: { 'x-ingest-key': INGEST_KEY },
+  })
+  const data = await res.json()
+  if (!data.ok) throw new Error(`mixed: ${data.error}`)
+  const stories = data.stories || []
+  if (!stories.length) return { skipped: 'nothing unpublished in 24h' }
+
+  log(`mixed: ${stories.length} stories across ${new Set(stories.map(s => s.category)).size} desks`)
+  if (DRY_RUN) return { dryRun: true, count: stories.length }
+
+  const images = stories.map((s) => s.cards.poster)
+  const slugs = stories.map((s) => s.slug)
+
+  let igId = null
+  if (meta.igEnabled && !SKIP_META) {
+    if (images.length === 1) {
+      const c = await graph(`${meta.igUserId}/media`, { image_url: jpegUrl(images[0]), caption: data.captions.instagram })
+      await waitFor(c.id)
+      igId = (await graph(`${meta.igUserId}/media_publish`, { creation_id: c.id })).id
+    } else {
+      const children = []
+      for (const img of images.slice(0, 10)) {
+        const c = await graph(`${meta.igUserId}/media`, { image_url: jpegUrl(img), is_carousel_item: 'true' })
+        children.push(c.id)
       }
+      for (const id of children) await waitFor(id)
+      const car = await graph(`${meta.igUserId}/media`, {
+        media_type: 'CAROUSEL',
+        children: children.join(','),
+        caption: data.captions.instagram,
+      })
+      await waitFor(car.id)
+      igId = (await graph(`${meta.igUserId}/media_publish`, { creation_id: car.id })).id
     }
-    results.push(pushed)
-  } catch (err) {
-    results.push({ desk, error: String(err).slice(0, 200) })
-    console.error(`${desk}: FAILED ${err}`)
   }
+
+  let fbId = null
+  if (meta.enabled && !SKIP_META) {
+    const photos = []
+    for (const img of images.slice(0, 10)) {
+      const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
+      photos.push(r.id)
+    }
+    const post = await graph(`${meta.pageId}/feed`, {
+      message: data.captions.facebook,
+      attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
+    })
+    fbId = post.id
+  }
+
+  let tg = null
+  try {
+    tg = await pushTelegram('mixed', data)
+  } catch (err) {
+    tg = { error: String(err).slice(0, 120) }
+  }
+
+  // Mark them so no story is ever posted twice.
+  try {
+    await fetch(`${SITE}/api/admin/mark-pushed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-ingest-key': INGEST_KEY },
+      body: JSON.stringify({ slugs }),
+    })
+  } catch {}
+
+  return { count: images.length, igId, fbId, telegram: tg }
+}
+
+const results = []
+try {
+  results.push(await pushMixed())
+} catch (err) {
+  results.push({ error: String(err).slice(0, 200) })
+  console.error(`mixed FAILED ${err}`)
 }
 
 log(`\n${edition} push complete`)
