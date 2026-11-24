@@ -2,8 +2,8 @@ name: ingest
 
 on:
   schedule:
-    # Every two hours: keeps Actions minutes inside the free 2,000/month
-    - cron: '5 */2 * * *'
+    # Hourly: sparse crons get dropped by GitHub's scheduler; hourly fires reliably.
+    - cron: '5 * * * *'
   workflow_dispatch:
 
 concurrency:
@@ -42,6 +42,11 @@ jobs:
 
       - name: Write stories
         run: |
+          HOUR=$(date -u +%H)
+          # Writing is the expensive step, so it runs every four hours while the
+          # sweep stays hourly. Keeps private-repo Action minutes under budget.
+          REM=$((10#$HOUR % 4))
+          if [ "$REM" != "0" ]; then echo "hour $HOUR — sweep only, no writing"; exit 0; fi
           code=$(curl -s -o write.json -w "%{http_code}" \
             -H "x-ingest-key: $INGEST_API_KEY" \
             "$SITE_URL/api/cron/write?limit=21&perDesk=3")
