@@ -19,6 +19,7 @@ const DESKS = only.length
   : ['tech', 'world', 'india', 'business', 'markets', 'science', 'health']
 const edition = process.argv[2] || 'morning'
 const DRY_RUN = process.env.DRY_RUN === 'true'
+const SKIP_META = process.env.SKIP_META === 'true'
 
 const log = (...a) => console.log(...a)
 
@@ -68,6 +69,7 @@ async function pushDesk(desk) {
   log(`${desk}: ${stories.length} stories → ${images.length} images`)
 
   if (DRY_RUN) return { desk, dryRun: true, count: images.length, caption: caption.slice(0, 80) }
+  if (SKIP_META) return { desk, count: images.length, skippedMeta: true }
 
   if (!meta.igEnabled) return { desk, skipped: 'instagram not configured' }
 
