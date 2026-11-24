@@ -12,22 +12,48 @@ concurrency:
 jobs:
   sweep:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    env:
+      SITE_URL: ${{ secrets.SITE_URL || 'https://informalbuff.vercel.app' }}
+      INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+      META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+      CLOUDINARY_CLOUD: ${{ secrets.CLOUDINARY_CLOUD || 'sq9i1aty' }}
+      DRY_RUN: 'false'
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       # One job does both halves: sweep the feeds, then turn the best
       # candidates into stories. Keeps private-repo Action minutes low.
       - name: Sweep feeds
         run: |
           code=$(curl -s -o sweep.json -w "%{http_code}" \
-            -H "x-ingest-key: ${{ secrets.INGEST_API_KEY }}" \
-            "https://informalbuff.vercel.app/api/cron/ingest")
+            -H "x-ingest-key: $INGEST_API_KEY" \
+            "$SITE_URL/api/cron/ingest")
           head -c 500 sweep.json; echo
           test "$code" = "200"
+
       - name: Write stories
         run: |
           code=$(curl -s -o write.json -w "%{http_code}" \
-            -H "x-ingest-key: ${{ secrets.INGEST_API_KEY }}" \
-            "https://informalbuff.vercel.app/api/cron/write?limit=14&perDesk=2")
-          head -c 1000 write.json; echo
+            -H "x-ingest-key: $INGEST_API_KEY" \
+            "$SITE_URL/api/cron/write?limit=14&perDesk=2")
+          head -c 1500 write.json; echo
           if [ "$code" = "503" ]; then echo "writer not configured (AI key missing) — nothing published"; exit 0; fi
           test "$code" = "200"
+
+      # Scheduled workflows with sparse crons are unreliable on GitHub, so the
+      # pushes ride on this hourly job instead of their own schedule.
+      - name: Push editions (00, 07, 12, 15 UTC)
+        run: |
+          H=$(date -u +%H)
+          case "$H" in
+            00|07|12|15) node src/push-bundles.js ;;
+            *) echo "not an edition hour ($H UTC) — skipping push" ;;
+          esac
