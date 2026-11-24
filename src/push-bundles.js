@@ -9,7 +9,7 @@
  * Instagram gets a carousel (max ten); Facebook gets the same images as a
  * multi-photo post.
  */
-import { SITE, meta, INGEST_KEY } from './config.js'
+import { SITE, meta, INGEST_KEY, telegram } from './config.js'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const CLOUD = process.env.CLOUDINARY_CLOUD || 'sq9i1aty'
@@ -113,10 +113,41 @@ async function pushDesk(desk) {
   return { desk, count: images.length, igId, fbId }
 }
 
+/** Telegram album: the same posters, caption on the first item. */
+async function pushTelegram(desk, data) {
+  if (!telegram.enabled) return { skipped: 'telegram channel not configured' }
+  const stories = data.stories || []
+  if (!stories.length) return { skipped: 'empty' }
+
+  const media = stories.slice(0, 10).map((s, i) => ({
+    type: 'photo',
+    media: s.cards.poster,
+    ...(i === 0 ? { caption: data.captions.telegram.slice(0, 950), parse_mode: 'HTML' } : {}),
+  }))
+
+  const res = await fetch(`https://api.telegram.org/bot${telegram.token}/sendMediaGroup`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: telegram.channel, media }),
+  })
+  const json = await res.json()
+  if (!json.ok) throw new Error(`telegram: ${json.description}`)
+  return { ok: true, messages: json.result?.length ?? 0 }
+}
+
 const results = []
 for (const desk of DESKS) {
   try {
-    results.push(await pushDesk(desk))
+    const pushed = await pushDesk(desk)
+    if (!pushed.skipped) {
+      try {
+        const data = await bundle(desk)
+        pushed.telegram = await pushTelegram(desk, data)
+      } catch (err) {
+        pushed.telegram = { error: String(err).slice(0, 120) }
+      }
+    }
+    results.push(pushed)
   } catch (err) {
     results.push({ desk, error: String(err).slice(0, 200) })
     console.error(`${desk}: FAILED ${err}`)
