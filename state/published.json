@@ -130,6 +130,25 @@
           "id": "1412491965285084_122103244077554832"
         }
       }
+    },
+    "russian-cargo-ship-sparta-ii-hit-by-drone-in-gulf-of-finland-crew-evacuated": {
+      "posted_at": "2026-11-24T01:00:38.992Z",
+      "results": {
+        "telegram": {
+          "skipped": "telegram not configured"
+        },
+        "x": {
+          "skipped": "x not configured"
+        },
+        "instagram": {
+          "ok": true,
+          "id": "18035662811676229"
+        },
+        "facebook": {
+          "ok": true,
+          "id": "1412491965285084_122103288123554832"
+        }
+      }
     }
   }
 }
