@@ -23,9 +23,13 @@ const SKIP_META = process.env.SKIP_META === 'true'
 
 const log = (...a) => console.log(...a)
 
-/** Hosted JPEG for Instagram: Cloudinary fetches the poster we already render. */
+/**
+ * JPEG straight from the site. Instagram refuses some PNGs, and asking
+ * Cloudinary to transcode burned a credit per image — encoding is done in the
+ * poster route instead, so social costs nothing.
+ */
 function jpegUrl(posterUrl) {
-  return `https://res.cloudinary.com/${CLOUD}/image/fetch/f_jpg,w_1080,q_auto/${encodeURIComponent(posterUrl)}`
+  return posterUrl.includes('?') ? `${posterUrl}&ext=jpg` : `${posterUrl}?ext=jpg`
 }
 
 async function graph(path, params, method = 'POST') {
