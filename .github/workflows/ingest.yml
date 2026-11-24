@@ -1,0 +1,24 @@
+name: ingest
+
+on:
+  schedule:
+    - cron: '5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Sweep feeds
+        run: |
+          code=$(curl -s -o out.json -w "%{http_code}" \
+            -H "x-ingest-key: ${{ secrets.INGEST_API_KEY }}" \
+            -H "authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://informalbuff.vercel.app/api/cron/ingest")
+          head -c 800 out.json; echo
+          test "$code" = "200"
