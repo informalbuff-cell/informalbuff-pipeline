@@ -1,0 +1,24 @@
+name: write
+
+on:
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: write
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Turn scored candidates into stories
+        run: |
+          code=$(curl -s -o out.json -w "%{http_code}" \
+            -H "x-ingest-key: ${{ secrets.INGEST_API_KEY }}" \
+            "https://informalbuff.vercel.app/api/cron/write?limit=14&perDesk=2")
+          head -c 1500 out.json; echo
+          if [ "$code" = "503" ]; then echo "writer not configured yet (AI key missing) — nothing published"; exit 0; fi
+          test "$code" = "200"
