@@ -8,7 +8,7 @@ import path from 'node:path';
 import { DRY_RUN, LIMIT, telegram as telegramCfg, x as xCfg, meta as metaCfg } from './config.js';
 import { recentArticles } from './site.js';
 import { buildPack, articleUrl } from './copy.js';
-import { cardUrl, portraitCard } from './cards.js';
+import { cardUrl, posterCard } from './cards.js';
 import * as telegram from './platforms/telegram.js';
 import * as x from './platforms/x.js';
 import { postFacebook, postInstagram, hasMirrorSince } from './platforms/meta.js';
@@ -53,7 +53,7 @@ async function main() {
     const headline = article.title || article.meta_title;
     const card = cardUrl({ imageUrl: article.image_url, headline });
     // Instagram fills more of the screen at 4:5 than at 1.91:1.
-    const igCard = portraitCard({ imageUrl: article.image_url, headline });
+    const igCard = posterCard({ slug: article.slug });
 
     console.log(`\n=== ${article.slug}`);
     console.log(`card: ${card}`);

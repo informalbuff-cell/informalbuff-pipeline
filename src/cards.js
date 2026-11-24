@@ -28,3 +28,12 @@ export function cardUrl({ imageUrl, headline, kicker = 'INFORMALBUFF', format = 
 
 export const storyCard = ({ imageUrl, headline }) => cardUrl({ imageUrl, headline, format: 'story' });
 export const portraitCard = ({ imageUrl, headline }) => cardUrl({ imageUrl, headline, format: 'portrait' });
+
+/**
+ * The site's full infographic poster, delivered as JPEG via Cloudinary fetch so
+ * Instagram accepts it without the pipeline holding upload credentials.
+ */
+export function posterCard({ slug, cloud = 'sq9i1aty' }) {
+  const target = `${SITE}/api/poster?slug=${encodeURIComponent(slug)}`;
+  return `https://res.cloudinary.com/${cloud}/image/fetch/f_jpg,w_1080,q_auto/${encodeURIComponent(target)}`;
+}
