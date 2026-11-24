@@ -2,7 +2,8 @@ name: ingest
 
 on:
   schedule:
-    - cron: '5 * * * *'
+    # Every two hours: keeps Actions minutes inside the free 2,000/month
+    - cron: '5 */2 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -43,7 +44,7 @@ jobs:
         run: |
           code=$(curl -s -o write.json -w "%{http_code}" \
             -H "x-ingest-key: $INGEST_API_KEY" \
-            "$SITE_URL/api/cron/write?limit=14&perDesk=2")
+            "$SITE_URL/api/cron/write?limit=21&perDesk=3")
           head -c 1500 write.json; echo
           if [ "$code" = "503" ]; then echo "writer not configured (AI key missing) — nothing published"; exit 0; fi
           test "$code" = "200"
