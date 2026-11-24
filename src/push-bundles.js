@@ -13,11 +13,18 @@ import { SITE, meta, INGEST_KEY, telegram } from './config.js'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const CLOUD = process.env.CLOUDINARY_CLOUD || 'sq9i1aty'
+const MAX_DESKS = Number(process.env.MAX_DESKS || 4)
+// Instagram allows 25 API publishes per rolling 24h. Four slots x four desks
+// keeps us at 16, well clear of the cap; the 06:00 signature post counts once.
+const hourIst = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false }).format(new Date()))
+const SIGNATURE = process.env.SIGNATURE === 'true' || (process.env.EDITION_AUTO !== 'false' && hourIst === 6)
 const only = (process.env.DESKS || '').split(',').map((d) => d.trim()).filter(Boolean)
 const DESKS = only.length
   ? only
   : ['tech', 'world', 'india', 'business', 'markets', 'science', 'health']
-const edition = process.argv[2] || 'morning'
+const edition =
+  process.argv[2] ||
+  (hourIst < 11 ? 'morning' : hourIst < 16 ? 'afternoon' : hourIst < 21 ? 'evening' : 'night')
 const DRY_RUN = process.env.DRY_RUN === 'true'
 const SKIP_META = process.env.SKIP_META === 'true'
 
@@ -42,7 +49,7 @@ async function graph(path, params, method = 'POST') {
 }
 
 async function bundle(desk) {
-  const res = await fetch(`${SITE}/api/bundle?desk=${desk}&limit=10&platform=instagram`, {
+  const res = await fetch(`${SITE}/api/bundle?desk=${desk}&limit=10&platform=instagram&edition=${edition}`, {
     headers: { 'x-ingest-key': INGEST_KEY },
   })
   const json = await res.json()
@@ -142,7 +149,74 @@ async function pushTelegram(desk, data) {
 }
 
 const results = []
-for (const desk of DESKS) {
+
+async function pushSignature() {
+  const res = await fetch(`${SITE}/api/bundle?signature=morning&limit=10&platform=instagram&edition=${edition}`, {
+    headers: { 'x-ingest-key': INGEST_KEY },
+  })
+  const data = await res.json()
+  if (!data.ok) throw new Error(`signature: ${data.error}`)
+  const stories = data.stories || []
+  if (!stories.length) return { skipped: 'no stories in 24h' }
+  log(`signature: ${stories.length} desks → ${stories.length} images`)
+
+  if (DRY_RUN) return { dryRun: true, count: stories.length }
+  if (SKIP_META) return { count: stories.length, skippedMeta: true }
+
+  const images = stories.map((s) => s.cards.poster)
+  let igId = null
+  if (meta.igEnabled) {
+    const children = []
+    for (const img of images.slice(0, 10)) {
+      const c = await graph(`${meta.igUserId}/media`, { image_url: jpegUrl(img), is_carousel_item: 'true' })
+      children.push(c.id)
+    }
+    for (const id of children) await waitFor(id)
+    const car = await graph(`${meta.igUserId}/media`, {
+      media_type: 'CAROUSEL',
+      children: children.join(','),
+      caption: data.captions.instagram,
+    })
+    await waitFor(car.id)
+    const pub = await graph(`${meta.igUserId}/media_publish`, { creation_id: car.id })
+    igId = pub.id
+  }
+
+  let fbId = null
+  if (meta.enabled) {
+    const photos = []
+    for (const img of images.slice(0, 10)) {
+      const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
+      photos.push(r.id)
+    }
+    const post = await graph(`${meta.pageId}/feed`, {
+      message: data.captions.facebook,
+      attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
+    })
+    fbId = post.id
+  }
+
+  let tg = null
+  try {
+    tg = await pushTelegram('signature', data)
+  } catch (err) {
+    tg = { error: String(err).slice(0, 120) }
+  }
+
+  return { signature: true, count: images.length, igId, fbId, telegram: tg }
+}
+
+const targets = SIGNATURE ? ['__signature__'] : DESKS.slice(0, MAX_DESKS)
+for (const desk of targets) {
+  if (desk === '__signature__') {
+    try {
+      results.push(await pushSignature())
+    } catch (err) {
+      results.push({ signature: true, error: String(err).slice(0, 200) })
+      console.error(`signature FAILED ${err}`)
+    }
+    continue
+  }
   try {
     const pushed = await pushDesk(desk)
     if (!pushed.skipped) {
