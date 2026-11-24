@@ -187,6 +187,25 @@
           "id": "1412491965285084_122103355557554832"
         }
       }
+    },
+    "signal-blocks-screenshots-on-mobile-apps-citing-ai-surveillance-threat": {
+      "posted_at": "2026-11-24T04:39:24.071Z",
+      "results": {
+        "telegram": {
+          "skipped": "telegram not configured"
+        },
+        "x": {
+          "skipped": "x not configured"
+        },
+        "instagram": {
+          "ok": true,
+          "id": "18027103625710809"
+        },
+        "facebook": {
+          "ok": true,
+          "id": "1412491965285084_122103392457554832"
+        }
+      }
     }
   }
 }
