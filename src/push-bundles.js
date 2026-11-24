@@ -13,7 +13,10 @@ import { SITE, meta, INGEST_KEY } from './config.js'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const CLOUD = process.env.CLOUDINARY_CLOUD || 'sq9i1aty'
-const DESKS = ['tech', 'world', 'india', 'business', 'markets', 'science', 'health']
+const only = (process.env.DESKS || '').split(',').map((d) => d.trim()).filter(Boolean)
+const DESKS = only.length
+  ? only
+  : ['tech', 'world', 'india', 'business', 'markets', 'science', 'health']
 const edition = process.argv[2] || 'morning'
 const DRY_RUN = process.env.DRY_RUN === 'true'
 
@@ -44,7 +47,7 @@ async function bundle(desk) {
 
 async function waitFor(id) {
   for (let i = 0; i < 30; i += 1) {
-    const r = await graph(`${id}?fields=status_code`, {}, 'GET')
+    const r = await graph(`${id}`, { fields: 'status_code' }, 'GET')
     if (r.status_code === 'FINISHED') return
     if (r.status_code === 'ERROR') throw new Error(`ig container ${id} failed`)
     await new Promise((r) => setTimeout(r, 2000))
