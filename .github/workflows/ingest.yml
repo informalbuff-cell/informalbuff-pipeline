@@ -14,11 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # One job does both halves: sweep the feeds, then turn the best
+      # candidates into stories. Keeps private-repo Action minutes low.
       - name: Sweep feeds
         run: |
-          code=$(curl -s -o out.json -w "%{http_code}" \
+          code=$(curl -s -o sweep.json -w "%{http_code}" \
             -H "x-ingest-key: ${{ secrets.INGEST_API_KEY }}" \
-            -H "authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "https://informalbuff.vercel.app/api/cron/ingest")
-          head -c 800 out.json; echo
+          head -c 500 sweep.json; echo
+          test "$code" = "200"
+      - name: Write stories
+        run: |
+          code=$(curl -s -o write.json -w "%{http_code}" \
+            -H "x-ingest-key: ${{ secrets.INGEST_API_KEY }}" \
+            "https://informalbuff.vercel.app/api/cron/write?limit=14&perDesk=2")
+          head -c 1000 write.json; echo
+          if [ "$code" = "503" ]; then echo "writer not configured (AI key missing) — nothing published"; exit 0; fi
           test "$code" = "200"
