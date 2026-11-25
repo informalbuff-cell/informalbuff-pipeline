@@ -40,10 +40,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: reel/package-lock.json
+
+      # Remotion downloads a headless Chromium (~150MB) on first render. Cache
+      # it, or every reel pays that download again and burns Action minutes.
+      - name: Cache Remotion browser
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/remotion
+            reel/node_modules
+          key: remotion-${{ hashFiles('reel/package-lock.json') }}
 
       - name: Install renderer
         working-directory: reel
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Render
         working-directory: reel

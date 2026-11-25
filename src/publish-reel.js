@@ -4,6 +4,7 @@
  */
 import { existsSync } from 'node:fs'
 import { postVideoToFacebookPage, publishReel, sendVideoToTelegram, uploadVideoToCloudinary } from './reel.js'
+import { r2Configured, uploadToR2 } from './r2.js'
 
 const OUT = process.env.REEL_OUT || 'reel/out/reel.mp4'
 const IG_USER_ID = process.env.IG_USER_ID
@@ -26,8 +27,19 @@ if (DRY_RUN) {
   process.exit(0)
 }
 
-const videoUrl = await uploadVideoToCloudinary(OUT)
-console.log('hosted', videoUrl)
+// R2 first (no egress bill, 10GB free), Cloudinary as the fallback so a
+// missing R2 configuration never stops a reel going out.
+const stamp = new Date().toISOString().slice(0, 10)
+const key = `reels/${stamp}-${Date.now()}.mp4`
+
+let videoUrl
+if (r2Configured()) {
+  videoUrl = await uploadToR2(OUT, key)
+  console.log('hosted on r2', videoUrl)
+} else {
+  videoUrl = await uploadVideoToCloudinary(OUT)
+  console.log('hosted on cloudinary', videoUrl)
+}
 
 // Each network is isolated: a Facebook or Telegram failure must not cost us
 // the Instagram reel, and vice versa.
