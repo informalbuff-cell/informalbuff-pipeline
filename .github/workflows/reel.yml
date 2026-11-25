@@ -1,0 +1,52 @@
+name: reel
+
+# Manual only until the first rendered reel has been published and checked.
+# Deliberately separate from ingest.yml: a video render must never be able to
+# block or delay the 4x/day carousel push.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Render and host, but do not publish to Instagram'
+        type: boolean
+        default: true
+
+jobs:
+  reel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SITE_URL: ${{ secrets.SITE_URL || 'https://informalbuff.vercel.app' }}
+      INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+      CLOUDINARY_CLOUD: ${{ secrets.CLOUDINARY_CLOUD || 'sq9i1aty' }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      REEL_AUDIO: 'music/bed.mp3'
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install renderer
+        working-directory: reel
+        run: npm ci
+
+      - name: Render
+        working-directory: reel
+        run: node render.mjs --out out/reel.mp4
+
+      - name: Publish to Instagram
+        run: node src/publish-reel.js
+
+      - name: Keep the reel
+        uses: actions/upload-artifact@v4
+        with:
+          name: reel
+          path: reel/out/reel.mp4
+          retention-days: 7
