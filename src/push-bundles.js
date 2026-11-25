@@ -29,6 +29,8 @@ const DRY_RUN = process.env.DRY_RUN === 'true'
 const SKIP_META = process.env.SKIP_META === 'true'
 /** The reel workflow owns the 20:30 Instagram slot on days it runs. */
 const SKIP_IG = process.env.SKIP_IG === 'true'
+/** Facebook is also covered by the reel at the 20:30 slot. */
+const SKIP_FB = process.env.SKIP_FB === 'true'
 
 const log = (...a) => console.log(...a)
 
@@ -128,7 +130,7 @@ async function pushDesk(desk) {
 
   // Facebook: one published photo post (cover poster + caption).
   let fbId = null
-  if (meta.enabled) {
+  if (meta.enabled && !SKIP_FB) {
     fbId = await postFacebook(meta.pageId, images, data.captions.facebook)
   }
 
@@ -191,7 +193,7 @@ async function pushSignature() {
   }
 
   let fbId = null
-  if (meta.enabled) {
+  if (meta.enabled && !SKIP_FB) {
     fbId = await postFacebook(meta.pageId, images, data.captions.facebook)
   }
 
@@ -292,7 +294,7 @@ async function pushMixed() {
   }
 
   let fbId = null
-  if (meta.enabled && !SKIP_META) {
+  if (meta.enabled && !SKIP_META && !SKIP_FB) {
     try {
       fbId = await postFacebook(meta.pageId, images, data.captions.facebook)
     } catch (err) {
