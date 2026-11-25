@@ -4,6 +4,10 @@ name: reel
 # Deliberately separate from ingest.yml: a video render must never be able to
 # block or delay the 4x/day carousel push.
 on:
+  schedule:
+    # 15:10 UTC = 20:40 IST, ten minutes after the carousel slot that the reel
+    # replaces. Scheduler drift on GitHub is minutes, so the gap is deliberate.
+    - cron: '10 15 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -24,7 +28,7 @@ jobs:
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
       REEL_AUDIO: 'music/bed.mp3'
-      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
 
     steps:
       - uses: actions/checkout@v4

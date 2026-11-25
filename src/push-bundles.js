@@ -27,6 +27,8 @@ const edition =
   (hourIst < 11 ? 'morning' : hourIst < 16 ? 'afternoon' : hourIst < 21 ? 'evening' : 'night')
 const DRY_RUN = process.env.DRY_RUN === 'true'
 const SKIP_META = process.env.SKIP_META === 'true'
+/** The reel workflow owns the 20:30 Instagram slot on days it runs. */
+const SKIP_IG = process.env.SKIP_IG === 'true'
 
 const log = (...a) => console.log(...a)
 
@@ -203,14 +205,57 @@ async function pushSignature() {
   return { signature: true, count: images.length, igId, fbId, telegram: tg }
 }
 
+
+/** The day's biggest stories, read straight from the published feed. */
+async function recapStories(limit) {
+  const xml = await fetch(`${SITE}/feed.xml`).then((r) => r.text())
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, limit)
+  const unescape = (t) =>
+    t.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  return items
+    .map((m) => {
+      const chunk = m[1]
+      const title = unescape(((chunk.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/) || [])[1] || '').trim())
+      const link = ((chunk.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim()
+      const slug = link.split('/article/')[1] || ''
+      const category = ((chunk.match(/<category>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/category>/) || [])[1] || '').trim()
+      return { title, slug, category, excerpt: '', cards: { poster: `${SITE}/api/poster?slug=${encodeURIComponent(slug)}` } }
+    })
+    .filter((s) => s.title && s.slug)
+}
+
+/** Captions for a recap, since the bundle endpoint only captions fresh stories. */
+function recapCaptions(stories, edition) {
+  const stamp = edition === 'evening' ? 'Tonight' : edition === 'afternoon' ? 'This afternoon' : 'This morning'
+  const head = stories[0]?.title || 'The stories that matter'
+  const list = stories.slice(1, 4).map((s, i) => `${i + 2}. ${s.title}`).join('\n')
+  const site = SITE.replace(/\/$/, '')
+  const host = site.replace(/^https?:\/\//, '')
+  return {
+    instagram: `${head}\n\n${stamp} — a recap of the day in ${stories.length} stories:\n${list}\n\nSave this. Send it to one person who should see it.\nFollow @informal.buff for the next brief.\nFull stories, sources and context → link in bio (${host})\n\n#news #india #tech #business #worldnews #informalbuff`,
+    facebook: `${head}\n\n${stamp} — a recap of the day in ${stories.length} stories:\n${list}\n\nEvery story is sourced and rewritten in our own words.\nFull stories, sources and context → ${site}\n\n#news #breakingnews #india #tech #business`,
+    telegram: `${stamp} recap — ${stories.length} stories\n\n${stories.slice(0, 4).map((s) => `• ${s.title}\n${site}/article/${s.slug}`).join('\n')}\n\nEverything, with sources → ${site}`,
+  }
+}
+
 async function pushMixed() {
   const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=10&platform=instagram&edition=${edition}`, {
     headers: { 'x-ingest-key': INGEST_KEY },
   })
   const data = await res.json()
   if (!data.ok) throw new Error(`mixed: ${data.error}`)
-  const stories = data.stories || []
-  if (!stories.length) return { skipped: 'nothing unpublished in 24h' }
+  let stories = data.stories || []
+
+  /**
+   * A slot with nothing new is covered by a recap of the day's biggest
+   * stories instead of going dark. The feed already carries them in order.
+   */
+  if (!stories.length) {
+    stories = await recapStories(10)
+    if (!stories.length) return { skipped: 'nothing unpublished and no recap available' }
+    log(`nothing new — recapping ${stories.length} stories from the day`)
+    data.captions = recapCaptions(stories, edition)
+  }
 
   log(`mixed: ${stories.length} stories across ${new Set(stories.map(s => s.category)).size} desks`)
   if (DRY_RUN) return { dryRun: true, count: stories.length }
@@ -219,7 +264,7 @@ async function pushMixed() {
   const slugs = stories.map((s) => s.slug)
 
   let igId = null
-  if (meta.igEnabled && !SKIP_META) {
+  if (meta.igEnabled && !SKIP_META && !SKIP_IG) {
    try {
     if (images.length === 1) {
       const c = await graph(`${meta.igUserId}/media`, { image_url: jpegUrl(images[0]), caption: data.captions.instagram })

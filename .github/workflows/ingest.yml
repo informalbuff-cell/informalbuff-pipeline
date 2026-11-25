@@ -65,6 +65,9 @@ jobs:
           HOUR=$(date -u +%H)
           echo "UTC hour is $HOUR"
           if [ "$HOUR" = "00" ] || [ "$HOUR" = "07" ] || [ "$HOUR" = "12" ] || [ "$HOUR" = "15" ]; then
+            # The 20:30 IST slot belongs to the reel workflow: Instagram gets a
+            # video there instead of a carousel with the same stories.
+            if [ "$HOUR" = "15" ]; then export SKIP_IG=true; fi
             node src/push-bundles.js
           else
             echo "not an edition hour — skipping push"
