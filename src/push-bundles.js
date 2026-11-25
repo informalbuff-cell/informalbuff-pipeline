@@ -48,6 +48,15 @@ async function graph(path, params, method = 'POST') {
   return json
 }
 
+/** Facebook: one published photo post. Uploading images as unpublished album
+ *  items and attaching them to /feed leaves them in the Page's "Photos" album
+ *  and renders as a photo dump rather than a timeline post, so post the cover
+ *  poster directly with the caption. */
+async function postFacebook(pageId, imageUrl, message) {
+  const r = await graph(`${pageId}/photos`, { url: imageUrl, message, published: 'true' })
+  return r.post_id || r.id
+}
+
 async function bundle(desk) {
   const res = await fetch(`${SITE}/api/bundle?desk=${desk}&limit=10&platform=instagram&edition=${edition}`, {
     headers: { 'x-ingest-key': INGEST_KEY },
@@ -108,19 +117,10 @@ async function pushDesk(desk) {
     igId = p.id
   }
 
-  // Facebook: the same images as one multi-photo post.
+  // Facebook: one published photo post (cover poster + caption).
   let fbId = null
   if (meta.enabled) {
-    const photos = []
-    for (const img of images.slice(0, 10)) {
-      const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
-      photos.push(r.id)
-    }
-    const post = await graph(`${meta.pageId}/feed`, {
-      message: data.captions.facebook,
-      attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
-    })
-    fbId = post.id
+    fbId = await postFacebook(meta.pageId, images[0], data.captions.facebook)
   }
 
   return { desk, count: images.length, igId, fbId }
@@ -134,7 +134,7 @@ async function pushTelegram(desk, data) {
 
   const media = stories.slice(0, 10).map((s, i) => ({
     type: 'photo',
-    media: s.cards.poster,
+    media: jpegUrl(s.cards.poster),
     ...(i === 0 ? { caption: data.captions.telegram.slice(0, 950), parse_mode: 'HTML' } : {}),
   }))
 
@@ -183,16 +183,7 @@ async function pushSignature() {
 
   let fbId = null
   if (meta.enabled) {
-    const photos = []
-    for (const img of images.slice(0, 10)) {
-      const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
-      photos.push(r.id)
-    }
-    const post = await graph(`${meta.pageId}/feed`, {
-      message: data.captions.facebook,
-      attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
-    })
-    fbId = post.id
+    fbId = await postFacebook(meta.pageId, images[0], data.captions.facebook)
   }
 
   let tg = null
@@ -251,16 +242,7 @@ async function pushMixed() {
   let fbId = null
   if (meta.enabled && !SKIP_META) {
     try {
-      const photos = []
-      for (const img of images.slice(0, 10)) {
-        const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
-        photos.push(r.id)
-      }
-      const post = await graph(`${meta.pageId}/feed`, {
-        message: data.captions.facebook,
-        attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
-      })
-      fbId = post.id
+      fbId = await postFacebook(meta.pageId, images[0], data.captions.facebook)
     } catch (err) {
       // A Page-permission gap must not block Instagram or Telegram.
       console.error(`facebook failed: ${String(err).slice(0, 120)}`)
