@@ -95,7 +95,13 @@ async function pushDesk(desk) {
     return { desk, skipped: 'empty' }
   }
 
-  const images = stories.map((s) => s.cards.poster)
+  // Slide 1 is the one-line hook card; the posters follow. This is the format
+  // every large news account uses — a poster alone is unreadable at feed size.
+  const lineCard = stories[0]?.cards?.line
+  const images = [
+    ...(lineCard ? [lineCard] : []),
+    ...stories.map((s) => s.cards.poster),
+  ].slice(0, 10)
   const caption = data.captions.instagram
   log(`${desk}: ${stories.length} stories → ${images.length} images`)
 
