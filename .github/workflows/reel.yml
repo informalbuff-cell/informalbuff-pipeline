@@ -5,9 +5,10 @@ name: reel
 # block or delay the 4x/day carousel push.
 on:
   schedule:
-    # 15:10 UTC = 20:40 IST, ten minutes after the carousel slot that the reel
-    # replaces. Scheduler drift on GitHub is minutes, so the gap is deliberate.
-    - cron: '10 15 * * *'
+    # Four slots a day, ten minutes after each carousel push:
+    # 00:10 = 05:40 IST, 07:10 = 12:40, 12:10 = 17:40, 15:10 = 20:40.
+    # The gap lets the carousel claim its stories first so both formats agree.
+    - cron: '10 0,7,12,15 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -23,7 +24,10 @@ jobs:
       SITE_URL: ${{ secrets.SITE_URL || 'https://informalbuff.vercel.app' }}
       INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
       IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
       META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
       CLOUDINARY_CLOUD: ${{ secrets.CLOUDINARY_CLOUD || 'sq9i1aty' }}
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
