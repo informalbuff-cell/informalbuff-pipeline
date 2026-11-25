@@ -222,6 +222,7 @@ async function pushMixed() {
 
   let igId = null
   if (meta.igEnabled && !SKIP_META) {
+   try {
     if (images.length === 1) {
       const c = await graph(`${meta.igUserId}/media`, { image_url: jpegUrl(images[0]), caption: data.captions.instagram })
       await waitFor(c.id)
@@ -241,6 +242,10 @@ async function pushMixed() {
       await waitFor(car.id)
       igId = (await graph(`${meta.igUserId}/media_publish`, { creation_id: car.id })).id
     }
+   } catch (err) {
+     console.error(`instagram failed: ${String(err).slice(0, 120)}`)
+     igId = null
+   }
   }
 
   let fbId = null
