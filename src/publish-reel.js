@@ -5,6 +5,7 @@
 import { existsSync } from 'node:fs'
 import { postVideoToFacebookPage, publishReel, sendVideoToTelegram, uploadVideoToCloudinary } from './reel.js'
 import { r2Configured, uploadToR2 } from './r2.js'
+import { releaseHostingConfigured, uploadReelToGitHub } from './gh-release.js'
 
 const OUT = process.env.REEL_OUT || 'reel/out/reel.mp4'
 const IG_USER_ID = process.env.IG_USER_ID
@@ -32,8 +33,13 @@ if (DRY_RUN) {
 const stamp = new Date().toISOString().slice(0, 10)
 const key = `reels/${stamp}-${Date.now()}.mp4`
 
+// Free hosts first: GitHub release assets need no card and carry no egress
+// bill, R2 is next, Cloudinary is the last resort because video eats credits.
 let videoUrl
-if (r2Configured()) {
+if (releaseHostingConfigured()) {
+  videoUrl = await uploadReelToGitHub(OUT, `reel-${stamp}-${Date.now()}.mp4`)
+  console.log('hosted on github release', videoUrl)
+} else if (r2Configured()) {
   videoUrl = await uploadToR2(OUT, key)
   console.log('hosted on r2', videoUrl)
 } else {

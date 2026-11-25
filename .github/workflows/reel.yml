@@ -20,6 +20,8 @@ jobs:
   reel:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write   # needed to publish the MP4 as a release asset
     env:
       SITE_URL: ${{ secrets.SITE_URL || 'https://informalbuff.vercel.app' }}
       INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
