@@ -264,7 +264,10 @@ async function pushMixed() {
     tg = { error: String(err).slice(0, 120) }
   }
 
-  // Mark them so no story is ever posted twice.
+  // Only mark when the networks that matter actually received the post. A
+  // Telegram-only run (Meta down) must leave the stories for the next attempt.
+  if (!igId && !fbId) return { count: images.length, igId, fbId, telegram: tg, marked: false }
+
   try {
     await fetch(`${SITE}/api/admin/mark-pushed`, {
       method: 'POST',
