@@ -48,13 +48,12 @@ async function graph(path, params, method = 'POST') {
   return json
 }
 
-/** Facebook: one published photo post. Uploading images as unpublished album
- *  items and attaching them to /feed leaves them in the Page's "Photos" album
- *  and renders as a photo dump rather than a timeline post, so post the cover
- *  poster directly with the caption. */
-async function postFacebook(pageId, imageUrl, message) {
-  const r = await graph(`${pageId}/photos`, { url: imageUrl, message, published: 'true' })
-  return r.post_id || r.id
+/** Facebook: a real timeline post — description plus a link back to the
+ *  article. Posting an image only files it into the Photos album, which is
+ *  what left the Page looking like a photo dump with no posts. */
+async function postFacebook(pageId, link, message) {
+  const r = await graph(`${pageId}/feed`, { message, link })
+  return r.id
 }
 
 async function bundle(desk) {
@@ -64,6 +63,10 @@ async function bundle(desk) {
   const json = await res.json()
   if (!json.ok) throw new Error(`bundle ${desk}: ${json.error}`)
   return json
+}
+
+function articleUrl(story) {
+  return story?.url || `${SITE}/article/${story?.slug || ''}`
 }
 
 async function waitFor(id) {
@@ -120,7 +123,7 @@ async function pushDesk(desk) {
   // Facebook: one published photo post (cover poster + caption).
   let fbId = null
   if (meta.enabled) {
-    fbId = await postFacebook(meta.pageId, images[0], data.captions.facebook)
+    fbId = await postFacebook(meta.pageId, articleUrl(stories[0]), data.captions.facebook)
   }
 
   return { desk, count: images.length, igId, fbId }
@@ -183,7 +186,7 @@ async function pushSignature() {
 
   let fbId = null
   if (meta.enabled) {
-    fbId = await postFacebook(meta.pageId, images[0], data.captions.facebook)
+    fbId = await postFacebook(meta.pageId, articleUrl(stories[0]), data.captions.facebook)
   }
 
   let tg = null
@@ -242,7 +245,7 @@ async function pushMixed() {
   let fbId = null
   if (meta.enabled && !SKIP_META) {
     try {
-      fbId = await postFacebook(meta.pageId, images[0], data.captions.facebook)
+      fbId = await postFacebook(meta.pageId, articleUrl(stories[0]), data.captions.facebook)
     } catch (err) {
       // A Page-permission gap must not block Instagram or Telegram.
       console.error(`facebook failed: ${String(err).slice(0, 120)}`)
