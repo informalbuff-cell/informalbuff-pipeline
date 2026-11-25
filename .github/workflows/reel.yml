@@ -1,8 +1,8 @@
 name: reel
 
-# Manual only until the first rendered reel has been published and checked.
-# Deliberately separate from ingest.yml: a video render must never be able to
-# block or delay the 4x/day carousel push.
+# One reel per edition, on all three networks. Deliberately a separate
+# workflow from ingest.yml: a slow video render must never delay or block the
+# carousel push that runs ten minutes earlier.
 on:
   schedule:
     # Four slots a day, ten minutes after each carousel push:
@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Render and host, but do not publish to Instagram'
+        description: 'Render and host, but do not publish to any network'
         type: boolean
         default: true
 
