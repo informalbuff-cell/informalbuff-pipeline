@@ -80,3 +80,33 @@ export async function publishReel({ igUserId, token, videoUrl, caption }) {
   })
   return published.id
 }
+
+/** Facebook: a Page video post from the hosted file. */
+export async function postVideoToFacebookPage({ pageId, token, videoUrl, description }) {
+  const res = await fetch(`${GRAPH}/${pageId}/videos`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ file_url: videoUrl, description, access_token: token }).toString(),
+  })
+  const json = await res.json()
+  if (json.error) throw new Error(json.error.message)
+  return json.id
+}
+
+/** Telegram: the same MP4 as a native video, plays inline in the channel. */
+export async function sendVideoToTelegram({ token, chatId, videoUrl, caption }) {
+  if (!token || !chatId) throw new Error('telegram not configured')
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      video: videoUrl,
+      caption,
+      supports_streaming: true,
+    }),
+  })
+  const json = await res.json()
+  if (!json.ok) throw new Error(json.description)
+  return { ok: true, messageId: json.result.message_id }
+}
