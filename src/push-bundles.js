@@ -245,16 +245,22 @@ async function pushMixed() {
 
   let fbId = null
   if (meta.enabled && !SKIP_META) {
-    const photos = []
-    for (const img of images.slice(0, 10)) {
-      const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
-      photos.push(r.id)
+    try {
+      const photos = []
+      for (const img of images.slice(0, 10)) {
+        const r = await graph(`${meta.pageId}/photos`, { url: img, published: 'false' })
+        photos.push(r.id)
+      }
+      const post = await graph(`${meta.pageId}/feed`, {
+        message: data.captions.facebook,
+        attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
+      })
+      fbId = post.id
+    } catch (err) {
+      // A Page-permission gap must not block Instagram or Telegram.
+      console.error(`facebook failed: ${String(err).slice(0, 120)}`)
+      fbId = null
     }
-    const post = await graph(`${meta.pageId}/feed`, {
-      message: data.captions.facebook,
-      attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
-    })
-    fbId = post.id
   }
 
   let tg = null
