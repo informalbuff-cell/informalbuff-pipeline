@@ -103,6 +103,10 @@ jobs:
       # missing. The reel now rides on this job, which already runs every hour
       # and tolerates a late start.
       - name: Publish reel for this edition
+        env:
+          # Release-asset hosting needs the token; it is not exported by default.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           HOUR=$(date -u +%H)
           case "$HOUR" in
