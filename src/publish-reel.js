@@ -17,7 +17,15 @@ if (!existsSync(OUT)) {
   process.exit(0)
 }
 
-const caption = `The three stories worth your evening — in 30 seconds.
+// The reel workflow fires four times a day; a morning reel must not say
+// "evening". Derive the label from IST so the copy always matches the hour.
+const istHour = Number(
+  new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' })
+    .format(new Date()),
+)
+const partOfDay = istHour < 11 ? 'morning' : istHour < 16 ? 'afternoon' : istHour < 21 ? 'evening' : 'night'
+
+const caption = `The three stories worth your ${partOfDay} — in 30 seconds.
 
 Full briefs, sources and context → informalbuff.vercel.app
 
