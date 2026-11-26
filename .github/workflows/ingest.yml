@@ -81,7 +81,7 @@ jobs:
             00) EDITION=morning;   ALLOW_RECAP=1 ;;
             01) EDITION=morning;   ALLOW_RECAP=0 ;;
             07) EDITION=afternoon; ALLOW_RECAP=1 ;;
-            08) EDITION=afternoon; ALLOW_RECAP=0 ;;
+            08) EDITION=afternoon; ALLOW_RECAP=0; SECOND_HOUR=1 ;;
             12) EDITION=evening;   ALLOW_RECAP=1 ;;
             13) EDITION=evening;   ALLOW_RECAP=0 ;;
             15) EDITION=night;     ALLOW_RECAP=1 ;;
@@ -98,6 +98,7 @@ jobs:
           # The delayed second hour must never post a recap: the first hour
           # already shipped the fresh stories and a recap would duplicate them.
           export ALLOW_RECAP
+          export SECOND_HOUR
           node src/push-bundles.js "$EDITION"
       # GitHub drops the separate reel cron often enough that slots went
       # missing. The reel now rides on this job, which already runs every hour

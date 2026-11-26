@@ -251,12 +251,38 @@ function recapCaptions(stories, edition) {
   }
 }
 
+
+/** True when a Meta post went out recently — used to stop a second-hour run
+ *  from pushing a duplicate edition 75 minutes after the first. */
+async function postedRecently(minutes = 180) {
+  const token = process.env.META_PAGE_TOKEN
+  const ig = process.env.IG_USER_ID
+  if (!token || !ig) return false
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${ig}/media?fields=timestamp&limit=1&access_token=${token}`,
+    )
+    const json = await res.json()
+    const last = json?.data?.[0]?.timestamp
+    if (!last) return false
+    return Date.now() - new Date(last).getTime() < minutes * 60 * 1000
+  } catch {
+    return false
+  }
+}
+
 async function pushMixed() {
   const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=10&platform=instagram&edition=${edition}`, {
     headers: { 'x-ingest-key': INGEST_KEY },
   })
   const data = await res.json()
   if (!data.ok) throw new Error(`mixed: ${data.error}`)
+  // The second hour of an edition window exists to catch a late scheduler run,
+  // not to post the edition twice.
+  if (process.env.SECOND_HOUR === '1' && (await postedRecently(180))) {
+    return { skipped: 'edition already published within 3 hours' }
+  }
+
   let stories = data.stories || []
 
   /**
