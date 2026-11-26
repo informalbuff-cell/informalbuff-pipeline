@@ -30,6 +30,8 @@ jobs:
       CLOUDINARY_CLOUD: ${{ secrets.CLOUDINARY_CLOUD || 'sq9i1aty' }}
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REEL_AUDIO: 'music/bed.mp3'
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
 
