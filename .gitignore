@@ -2,3 +2,5 @@ node_modules/
 reel/out/
 reel/public/posters/
 reel/props.json
+reel/public/music/*.wav
+reel/public/*.png
