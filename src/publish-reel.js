@@ -43,12 +43,15 @@ if (DRY_RUN) {
 async function recentlyPosted(token, igUserId, minutes = 20) {
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${igUserId}/media?fields=timestamp&limit=1&access_token=${token}`,
+      `https://graph.facebook.com/v21.0/${igUserId}/media?fields=timestamp,media_type&limit=1&access_token=${token}`,
     )
     const json = await res.json()
-    const last = json?.data?.[0]?.timestamp
-    if (!last) return false
-    return Date.now() - new Date(last).getTime() < minutes * 60 * 1000
+    const item = json?.data?.[0]
+    if (!item?.timestamp) return false
+    // Only a recent *video* means a reel already shipped. A carousel from the
+    // same slot must not block the reel that is supposed to follow it.
+    if (item.media_type !== 'VIDEO') return false
+    return Date.now() - new Date(item.timestamp).getTime() < minutes * 60 * 1000
   } catch {
     return false
   }
