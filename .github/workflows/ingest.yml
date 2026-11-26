@@ -60,6 +60,14 @@ jobs:
 
       # Scheduled workflows with sparse crons are unreliable on GitHub, so the
       # pushes ride on this hourly job instead of their own schedule.
+      # The owner does not want a review queue: publish anything that has a real
+      # picture and a real body, leave the rest behind.
+      - name: Auto-publish ready drafts
+        run: |
+          curl -s --max-time 90 -X POST \
+            -H "x-ingest-key: $INGEST_API_KEY" \
+            "$SITE_URL/api/cron/autopublish" | head -c 400; echo
+
       - name: Push editions
         run: |
           HOUR=$(date -u +%H)
