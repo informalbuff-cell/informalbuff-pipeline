@@ -53,7 +53,12 @@ jobs:
           # stories. Four calls per writing cycle keeps each well inside that.
           # The writer can take two minutes when the model is slow, and a single
           # timeout must never fail the whole job — the push still has to run.
-          for i in 1 2 3; do
+          # Edition hours push afterwards, so they write less and ship sooner.
+          case "$HOUR" in
+            00|07|12|15) ROUNDS=2 ;;
+            *) ROUNDS=3 ;;
+          esac
+          for i in $(seq 1 $ROUNDS); do
             code=$(curl -s --max-time 240 -o write.json -w "%{http_code}" \
               -H "x-ingest-key: $INGEST_API_KEY" \
               "$SITE_URL/api/cron/write?limit=2&perDesk=1") || code=000
