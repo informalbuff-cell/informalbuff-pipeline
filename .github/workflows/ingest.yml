@@ -51,13 +51,15 @@ jobs:
           if [ "$REM" != "0" ]; then echo "hour $HOUR — sweep only, no writing"; exit 0; fi
           # Vercel Hobby kills a function at 60s, so each call writes at most two
           # stories. Four calls per writing cycle keeps each well inside that.
-          for i in 1 2 3 4; do
-            code=$(curl -s --max-time 70 -o write.json -w "%{http_code}" \
+          # The writer can take two minutes when the model is slow, and a single
+          # timeout must never fail the whole job — the push still has to run.
+          for i in 1 2 3; do
+            code=$(curl -s --max-time 240 -o write.json -w "%{http_code}" \
               -H "x-ingest-key: $INGEST_API_KEY" \
-              "$SITE_URL/api/cron/write?limit=2&perDesk=1")
-            head -c 600 write.json; echo
-            if [ "$code" = "503" ]; then echo "writer not configured — nothing published"; exit 0; fi
-            if [ "$code" != "200" ]; then echo "write call $i returned $code"; break; fi
+              "$SITE_URL/api/cron/write?limit=2&perDesk=1") || code=000
+            head -c 400 write.json 2>/dev/null; echo
+            if [ "$code" = "503" ]; then echo "writer not configured — nothing published"; break; fi
+            if [ "$code" != "200" ]; then echo "write call $i returned $code — continuing"; continue; fi
           done
 
       # Scheduled workflows with sparse crons are unreliable on GitHub, so the
