@@ -34,7 +34,7 @@ jobs:
       # candidates into stories. Keeps private-repo Action minutes low.
       - name: Sweep feeds
         run: |
-          code=$(curl -s -o sweep.json -w "%{http_code}" \
+          code=$(curl -s --max-time 60 -o sweep.json -w "%{http_code}" \
             -H "x-ingest-key: $INGEST_API_KEY" \
             "$SITE_URL/api/cron/ingest")
           head -c 500 sweep.json; echo
@@ -50,7 +50,7 @@ jobs:
           # Vercel Hobby kills a function at 60s, so each call writes at most two
           # stories. Four calls per writing cycle keeps each well inside that.
           for i in 1 2 3 4; do
-            code=$(curl -s -o write.json -w "%{http_code}" \
+            code=$(curl -s --max-time 70 -o write.json -w "%{http_code}" \
               -H "x-ingest-key: $INGEST_API_KEY" \
               "$SITE_URL/api/cron/write?limit=2&perDesk=1")
             head -c 600 write.json; echo
