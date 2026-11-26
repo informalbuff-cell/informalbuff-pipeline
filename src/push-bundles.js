@@ -277,6 +277,26 @@ async function pushMixed() {
   const images = stories.map((s) => s.cards.poster)
   const slugs = stories.map((s) => s.slug)
 
+  let tg = null
+  try {
+    tg = await pushTelegram('mixed', data)
+  } catch (err) {
+    tg = { error: String(err).slice(0, 120) }
+  }
+
+  // Only mark when the networks that matter actually received the post. A
+  // Telegram-only run (Meta down) must leave the stories for the next attempt.
+  let fbId = null
+  if (meta.enabled && !SKIP_META && !SKIP_FB) {
+    try {
+      fbId = await postFacebook(meta.pageId, images, data.captions.facebook)
+    } catch (err) {
+      // A Page-permission gap must not block Instagram or Telegram.
+      console.error(`facebook failed: ${String(err).slice(0, 120)}`)
+      fbId = null
+    }
+  }
+
   let igId = null
   if (meta.igEnabled && !SKIP_META && !SKIP_IG) {
    try {
@@ -305,26 +325,6 @@ async function pushMixed() {
    }
   }
 
-  let fbId = null
-  if (meta.enabled && !SKIP_META && !SKIP_FB) {
-    try {
-      fbId = await postFacebook(meta.pageId, images, data.captions.facebook)
-    } catch (err) {
-      // A Page-permission gap must not block Instagram or Telegram.
-      console.error(`facebook failed: ${String(err).slice(0, 120)}`)
-      fbId = null
-    }
-  }
-
-  let tg = null
-  try {
-    tg = await pushTelegram('mixed', data)
-  } catch (err) {
-    tg = { error: String(err).slice(0, 120) }
-  }
-
-  // Only mark when the networks that matter actually received the post. A
-  // Telegram-only run (Meta down) must leave the stories for the next attempt.
   if (!igId && !fbId) return { count: images.length, igId, fbId, telegram: tg, marked: false }
 
   try {
