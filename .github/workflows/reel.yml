@@ -4,11 +4,8 @@ name: reel
 # workflow from ingest.yml: a slow video render must never delay or block the
 # carousel push that runs ten minutes earlier.
 on:
-  schedule:
-    # Four slots a day, ten minutes after each carousel push:
-    # 00:10 = 05:40 IST, 07:10 = 12:40, 12:10 = 17:40, 15:10 = 20:40.
-    # The gap lets the carousel claim its stories first so both formats agree.
-    - cron: '10 0,7,12,15 * * *'
+  # Scheduled reels now ride on ingest.yml: GitHub dropped this separate cron
+  # often enough that slots went missing. Manual runs remain for testing.
   workflow_dispatch:
     inputs:
       dry_run:

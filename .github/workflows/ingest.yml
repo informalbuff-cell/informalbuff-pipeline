@@ -13,7 +13,9 @@ concurrency:
 jobs:
   sweep:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    permissions:
+      contents: write   # the reel is published as a release asset
     env:
       SITE_URL: ${{ secrets.SITE_URL || 'https://informalbuff.vercel.app' }}
       INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
@@ -97,3 +99,18 @@ jobs:
           # already shipped the fresh stories and a recap would duplicate them.
           export ALLOW_RECAP
           node src/push-bundles.js "$EDITION"
+      # GitHub drops the separate reel cron often enough that slots went
+      # missing. The reel now rides on this job, which already runs every hour
+      # and tolerates a late start.
+      - name: Publish reel for this edition
+        run: |
+          HOUR=$(date -u +%H)
+          case "$HOUR" in
+            00|07|12|15) ;;
+            *) echo "not an edition hour — no reel"; exit 0 ;;
+          esac
+          cd reel
+          npm ci --prefer-offline --no-audit --no-fund
+          node render.mjs --out out/reel.mp4 || { echo "render failed"; exit 0; }
+          cd ..
+          node src/publish-reel.js || echo "reel publish failed — carousel already shipped"
