@@ -164,7 +164,7 @@ async function pushTelegram(desk, data) {
   })
   const json = await res.json()
   if (!json.ok) throw new Error(`telegram: ${json.description}`)
-  return { ok: true, messages: json.result?.length ?? 0 }
+  return { ok: true, messages: json.result?.length ?? 0, ids: (json.result || []).map((m) => m.message_id) }
 }
 
 
