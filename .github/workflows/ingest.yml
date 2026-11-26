@@ -64,9 +64,28 @@ jobs:
         run: |
           HOUR=$(date -u +%H)
           echo "UTC hour is $HOUR"
-          if [ "$HOUR" = "00" ] || [ "$HOUR" = "07" ] || [ "$HOUR" = "12" ] || [ "$HOUR" = "15" ]; then
-            # Owner's call: every slot carries both the carousel and the reel.
-            node src/push-bundles.js
-          else
-            echo "not an edition hour — skipping push"
+          # GitHub's scheduler routinely fires this job 20-50 minutes late, so
+          # each edition gets a two-hour window instead of a single hour. Miss
+          # the slot by minutes and the edition still ships.
+          case "$HOUR" in
+            00) EDITION=morning;   ALLOW_RECAP=1 ;;
+            01) EDITION=morning;   ALLOW_RECAP=0 ;;
+            07) EDITION=afternoon; ALLOW_RECAP=1 ;;
+            08) EDITION=afternoon; ALLOW_RECAP=0 ;;
+            12) EDITION=evening;   ALLOW_RECAP=1 ;;
+            13) EDITION=evening;   ALLOW_RECAP=0 ;;
+            15) EDITION=night;     ALLOW_RECAP=1 ;;
+            16) EDITION=night;     ALLOW_RECAP=0 ;;
+            *)  EDITION=; ;;
+          esac
+
+          if [ -z "$EDITION" ]; then
+            echo "not an edition window — skipping push"
+            exit 0
           fi
+
+          echo "edition=$EDITION recap=$ALLOW_RECAP"
+          # The delayed second hour must never post a recap: the first hour
+          # already shipped the fresh stories and a recap would duplicate them.
+          export ALLOW_RECAP
+          node src/push-bundles.js "$EDITION"

@@ -31,6 +31,8 @@ const SKIP_META = process.env.SKIP_META === 'true'
 const SKIP_IG = process.env.SKIP_IG === 'true'
 /** Facebook is also covered by the reel at the 20:30 slot. */
 const SKIP_FB = process.env.SKIP_FB === 'true'
+/** Recaps are only allowed in the first hour of an edition window. */
+const ALLOW_RECAP = process.env.ALLOW_RECAP !== '0'
 
 const log = (...a) => console.log(...a)
 
@@ -258,6 +260,10 @@ async function pushMixed() {
    * A slot with nothing new is covered by a recap of the day's biggest
    * stories instead of going dark. The feed already carries them in order.
    */
+  if (!stories.length && !ALLOW_RECAP) {
+    return { skipped: 'nothing new, and recap is closed for this window' }
+  }
+
   if (!stories.length) {
     stories = await recapStories(10)
     if (!stories.length) return { skipped: 'nothing unpublished and no recap available' }
