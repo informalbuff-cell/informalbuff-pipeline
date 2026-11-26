@@ -28,6 +28,29 @@ if (DRY_RUN) {
   process.exit(0)
 }
 
+/**
+ * Delayed runs are routine on GitHub. If Instagram posted within the last 20
+ * minutes, this reel would duplicate the edition that just shipped, so skip.
+ */
+async function recentlyPosted(token, igUserId, minutes = 20) {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${igUserId}/media?fields=timestamp&limit=1&access_token=${token}`,
+    )
+    const json = await res.json()
+    const last = json?.data?.[0]?.timestamp
+    if (!last) return false
+    return Date.now() - new Date(last).getTime() < minutes * 60 * 1000
+  } catch {
+    return false
+  }
+}
+
+if (await recentlyPosted(TOKEN, IG_USER_ID)) {
+  console.log('instagram posted within 20 minutes — skipping this reel to avoid a duplicate')
+  process.exit(0)
+}
+
 // R2 first (no egress bill, 10GB free), Cloudinary as the fallback so a
 // missing R2 configuration never stops a reel going out.
 const stamp = new Date().toISOString().slice(0, 10)
