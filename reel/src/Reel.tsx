@@ -26,6 +26,7 @@ export type ReelProps = {
   handle: string
   site: string
   style?: 'poster' | 'split'
+  audioVolume?: number
 }
 
 const INK = '#0b0b10'
@@ -266,13 +267,13 @@ function fitTitle(title: string) {
   return { text: cut, size: cut.length > 70 ? 46 : cut.length > 52 ? 52 : 62 }
 }
 
-export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site, style }) => {
+export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site, style, audioVolume }) => {
   const { durationInFrames } = useVideoConfig()
   const shown = stories.slice(0, 3)
 
   return (
     <AbsoluteFill style={{ background: INK, fontFamily: 'Inter, Helvetica, Arial, sans-serif' }}>
-      {audio ? <Audio src={staticFile(audio)} /> : null}
+      {audio ? <Audio src={staticFile(audio)} volume={audioVolume ?? 1} /> : null}
       <Progress total={durationInFrames} />
 
       <Sequence from={0} durationInFrames={HOOK_FRAMES}>

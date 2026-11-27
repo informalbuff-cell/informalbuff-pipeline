@@ -7,22 +7,40 @@
  * a carousel never disagree about the day's news.
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 const SITE = (process.env.SITE_URL || 'https://informalbuff.vercel.app').replace(/\/$/, '')
 const INGEST_KEY = process.env.INGEST_API_KEY || ''
 /**
- * The bed is part of the product, so it is on by default when the file is
- * there. Relying on REEL_AUDIO alone broke once when the step moved between
- * workflows and the variable stayed behind.
+ * Music: one bed per day, rotating through a five-track pool so the feed never
+ * sounds the same twice in a row. REEL_TRACK pins a file, REEL_AUDIO=none is
+ * silent (tests).
  */
-const DEFAULT_AUDIO = 'music/bed.mp3'
-const AUDIO_OVERRIDE = process.env.REEL_AUDIO
-const AUDIO =
-  AUDIO_OVERRIDE === 'none'
-    ? null
-    : AUDIO_OVERRIDE || (existsSync(resolve('public', DEFAULT_AUDIO)) ? DEFAULT_AUDIO : null)
+function pickTrack() {
+  if (process.env.REEL_TRACK) {
+    const f = `music/library/${process.env.REEL_TRACK}`
+    return existsSync(resolve('public', f)) ? { file: f, gain: 1 } : null
+  }
+  const rotationPath = resolve('public/music/rotation.json')
+  if (existsSync(rotationPath)) {
+    const rotation = JSON.parse(readFileSync(rotationPath, 'utf8'))
+    const pool = rotation.pool || []
+    if (pool.length) {
+      const dayNumber = Math.floor(Date.now() / 86400000)
+      const pick = pool[dayNumber % pool.length]
+      const gainDb = (rotation.targetMeanDb ?? -12) - (pick.meanDb ?? -15)
+      const gain = Math.min(2, Math.max(0.5, Math.pow(10, gainDb / 20)))
+      return { file: `music/library/${pick.file}`, gain, mood: pick.mood }
+    }
+  }
+  return existsSync(resolve('public/music/bed.mp3')) ? { file: 'bed.mp3', gain: 1 } : null
+}
+
+const PICKED = process.env.REEL_AUDIO === 'none' ? null : pickTrack()
+const AUDIO = PICKED ? PICKED.file : null
+const AUDIO_GAIN = PICKED ? PICKED.gain : 1
+if (PICKED) console.log(`music: ${PICKED.file}${PICKED.mood ? ` (${PICKED.mood})` : ''} gain ${AUDIO_GAIN.toFixed(2)}`)
 const OUT = process.argv.includes('--out')
   ? process.argv[process.argv.indexOf('--out') + 1]
   : 'out/reel.mp4'
@@ -123,6 +141,7 @@ const props = {
   handle: '@informal.buff',
   site: 'informalbuff.vercel.app',
   audio: AUDIO,
+  audioVolume: AUDIO_GAIN,
   style: STYLE,
   stories,
 }
