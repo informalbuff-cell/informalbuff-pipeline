@@ -293,21 +293,6 @@ async function pushMixed() {
 
   let stories = data.stories || []
 
-  // The reel must show the same stories as the carousel. Publish order and the
-  // pushed flags make a second bundle call unreliable, so the reel reads this.
-  try {
-    writeFileSync(
-      'last-bundle.json',
-      JSON.stringify({
-        edition,
-        at: new Date().toISOString(),
-        stories: stories.slice(0, 3).map((s) => ({ slug: s.slug, title: s.title, cards: s.cards })),
-      }),
-    )
-  } catch (err) {
-    log(`could not write last-bundle.json: ${err.message}`)
-  }
-
   /**
    * A slot with nothing new is covered by a recap of the day's biggest
    * stories instead of going dark. The feed already carries them in order.
@@ -327,6 +312,23 @@ async function pushMixed() {
   }
 
   log(`mixed: ${stories.length} stories across ${new Set(stories.map(s => s.category)).size} desks`)
+
+  // The reel must show the same stories as the carousel. Publish marks them
+  // pushed, so a second bundle call comes back empty; hand the list over here,
+  // after the recap fallback has filled it.
+  try {
+    writeFileSync(
+      'last-bundle.json',
+      JSON.stringify({
+        edition,
+        at: new Date().toISOString(),
+        stories: stories.slice(0, 3).map((s) => ({ slug: s.slug, title: s.title, cards: s.cards })),
+      }),
+    )
+  } catch (err) {
+    log(`could not write last-bundle.json: ${err.message}`)
+  }
+
   if (DRY_RUN) return { dryRun: true, count: stories.length }
 
   const images = stories.map((s) => s.cards.poster)
