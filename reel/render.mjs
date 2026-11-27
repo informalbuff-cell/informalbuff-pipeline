@@ -138,8 +138,25 @@ for (const [i, s] of rows.entries()) {
 // The publisher needs the lead slug to render the cover thumbnail.
 writeFileSync('out/cover-slug.txt', String(rows[0]?.slug || ''))
 
+// Hook frame wants the raw photo, not the card that already carries text.
+let heroImage = null
+const heroSrc = rows[0]?.photo
+if (heroSrc) {
+  try {
+    const r = await fetch(heroSrc)
+    if (r.ok) {
+      writeFileSync('public/posters/hero.jpg', Buffer.from(await r.arrayBuffer()))
+      heroImage = 'posters/hero.jpg'
+    }
+  } catch (err) {
+    console.log(`hero photo failed: ${err.message}`)
+  }
+}
+
 const props = {
   hook: toHook(rows),
+  hero: heroImage,
+  payoff: whyLine(rows[0]?.content || '') || rows[0]?.excerpt || '',
   kicker: 'InformalBuff',
   handle: '@informal.buff',
   site: 'informalbuff.vercel.app',

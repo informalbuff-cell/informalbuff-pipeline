@@ -27,6 +27,8 @@ export type ReelProps = {
   site: string
   style?: 'poster' | 'split'
   audioVolume?: number
+  hero?: string | null
+  payoff?: string
 }
 
 const INK = '#0b0b10'
@@ -35,8 +37,9 @@ const YELLOW = '#f4e75c'
 const WASH = ['#d3f3c8', '#cfe9f7', '#ffd9e2']
 
 /** Seconds each story holds. Long enough to read, short enough to keep pace. */
-const STORY_FRAMES = 240
-const HOOK_FRAMES = 90
+const STORY_FRAMES = 200
+const HOOK_FRAMES = 60
+const PAYOFF_FRAMES = 150
 const CTA_FRAMES = 90
 
 function usePop(delay = 0) {
@@ -267,7 +270,139 @@ function fitTitle(title: string) {
   return { text: cut, size: cut.length > 70 ? 46 : cut.length > 52 ? 52 : 62 }
 }
 
-export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site, style, audioVolume }) => {
+
+const TICKER_H = 78
+
+/** A number on screen in the first two seconds is the strongest hook we have. */
+function hookNumber(title: string) {
+  const m = (title || '').match(/(\d[\d.,]*\s?(?:%|bn|billion|m|million|k|lakh|crore)?)/i)
+  return m ? m[1].replace(/\s+/g, ' ').toUpperCase() : null
+}
+
+const HookFrame: React.FC<{ hook: string; image?: string }> = ({ hook, image }) => {
+  const frame = useCurrentFrame()
+  const zoom = interpolate(frame, [0, HOOK_FRAMES], [1.12, 1.0], { extrapolateRight: 'clamp' })
+  const num = hookNumber(hook)
+  const words = (hook || '').replace(/\s+/g, ' ').trim().split(' ')
+  const short = words.slice(0, 7).join(' ')
+
+  // Without a raw photo, the card image still works: its top 40% is the
+  // picture, and the crop hides the card's own headline underneath.
+  const stripNumber = num ? short.replace(new RegExp(num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '').replace(/\s+/g, ' ').trim() : short
+
+  return (
+    <AbsoluteFill style={{ background: INK }}>
+      {image ? (
+        <Img
+          src={image.startsWith('http') ? image : staticFile(image)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '42%',
+            objectFit: 'cover',
+            objectPosition: 'center 30%',
+            transform: `scale(${zoom})`,
+          }}
+        />
+      ) : null}
+      <AbsoluteFill
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(6,6,10,0.35) 0%, rgba(6,6,10,0.72) 45%, rgba(6,6,10,0.97) 78%, #08080c 100%)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: 70,
+          right: 70,
+          bottom: TICKER_H + 90,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {num ? (
+          <div style={{ fontSize: 210, fontWeight: 900, color: YELLOW, lineHeight: 0.9, letterSpacing: -6 }}>{num}</div>
+        ) : null}
+        <div
+          style={{
+            marginTop: num ? 16 : 0,
+            fontSize: num ? 64 : 86,
+            fontWeight: 900,
+            lineHeight: 1.02,
+            color: PAPER,
+            textTransform: 'uppercase',
+            maxHeight: num ? 200 : 330,
+            overflow: 'hidden',
+          }}
+        >
+          {stripNumber || short}
+        </div>
+        <div style={{ marginTop: 26, display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 14, height: 14, borderRadius: 7, background: YELLOW, marginRight: 12 }} />
+          <div style={{ fontSize: 34, fontWeight: 700, color: '#d9d9e2' }}>3 stories · 30 seconds</div>
+        </div>
+      </div>
+    </AbsoluteFill>
+  )
+}
+
+/** Scrolling headline strip — reads as "news" instantly. */
+const Ticker: React.FC<{ items: string[] }> = ({ items }) => {
+  const frame = useCurrentFrame()
+  const joined = items.filter(Boolean).join('   •   ')
+  const text = `${joined}   •   ${joined}   •   ${joined}`
+  const shift = (frame * 3) % 2400
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: TICKER_H,
+        background: '#0b0b12',
+        borderTop: `3px solid ${YELLOW}`,
+        display: 'flex',
+        alignItems: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ transform: `translateX(${-shift}px)`, whiteSpace: 'nowrap', display: 'flex' }}>
+        <span style={{ fontSize: 30, fontWeight: 800, color: YELLOW, paddingLeft: 20 }}>{text}</span>
+      </div>
+    </div>
+  )
+}
+
+/** The payoff: why the viewer should care, in one sentence. */
+const Payoff: React.FC<{ line: string }> = ({ line }) => {
+  const frame = useCurrentFrame()
+  const rise = interpolate(frame, [0, 18], [40, 0], { extrapolateRight: 'clamp' })
+  const fade = interpolate(frame, [0, 14], [0, 1], { extrapolateRight: 'clamp' })
+  return (
+    <AbsoluteFill style={{ background: YELLOW, padding: 80, justifyContent: 'center' }}>
+      <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 4, color: INK, opacity: 0.7 }}>WHY IT MATTERS</div>
+      <div
+        style={{
+          marginTop: 26,
+          fontSize: line.length > 90 ? 56 : 68,
+          lineHeight: 1.12,
+          fontWeight: 900,
+          color: INK,
+          opacity: fade,
+          transform: `translateY(${rise}px)`,
+        }}
+      >
+        {line.slice(0, 150)}
+      </div>
+    </AbsoluteFill>
+  )
+}
+
+export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site, style, audioVolume, hero, payoff }) => {
   const { durationInFrames } = useVideoConfig()
   const shown = stories.slice(0, 3)
 
@@ -277,7 +412,7 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
       <Progress total={durationInFrames} />
 
       <Sequence from={0} durationInFrames={HOOK_FRAMES}>
-        <Hook hook={hook} kicker={kicker} />
+        <HookFrame hook={hook} image={hero || shown[0]?.image} />
       </Sequence>
 
       {shown.map((story, i) => (
@@ -290,9 +425,19 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
         </Sequence>
       ))}
 
-      <Sequence from={HOOK_FRAMES + shown.length * STORY_FRAMES} durationInFrames={CTA_FRAMES}>
+      <Sequence from={HOOK_FRAMES + shown.length * STORY_FRAMES} durationInFrames={PAYOFF_FRAMES}>
+        <Payoff line={(payoff || shown[0]?.line || hook).slice(0, 150)} />
+      </Sequence>
+
+      <Sequence
+        from={HOOK_FRAMES + shown.length * STORY_FRAMES + PAYOFF_FRAMES}
+        durationInFrames={CTA_FRAMES}
+      >
         <CallToAction handle={handle} site={site} />
       </Sequence>
+
+      <Ticker items={shown.map((s2) => s2.title)} />
     </AbsoluteFill>
   )
 }
+
