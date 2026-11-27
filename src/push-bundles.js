@@ -336,7 +336,10 @@ async function pushMixed() {
 
   if (DRY_RUN) return { dryRun: true, count: stories.length }
 
-  const images = stories.map((s) => s.cards.poster)
+  // Slide one is the split card, exactly like the desk push. Posters alone read
+  // as the old format in the feed.
+  const splitLead = stories[0]?.cards?.split || stories[0]?.cards?.line
+  const images = [...(splitLead ? [splitLead] : []), ...stories.map((s) => s.cards.poster)].slice(0, 6)
   const slugs = stories.map((s) => s.slug)
 
   let tg = null

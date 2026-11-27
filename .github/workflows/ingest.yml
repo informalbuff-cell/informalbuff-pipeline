@@ -91,13 +91,13 @@ jobs:
           # the slot by minutes and the edition still ships.
           case "$HOUR" in
             00) EDITION=morning;   ALLOW_RECAP=1 ;;
-            01) EDITION=morning;   ALLOW_RECAP=0 ;;
+            01) SECOND_HOUR=1; EDITION=morning;   ALLOW_RECAP=0 ;;
             07) EDITION=afternoon; ALLOW_RECAP=1 ;;
             08) EDITION=afternoon; ALLOW_RECAP=0; SECOND_HOUR=1 ;;
             12) EDITION=evening;   ALLOW_RECAP=1 ;;
-            13) EDITION=evening;   ALLOW_RECAP=0 ;;
+            13) SECOND_HOUR=1; EDITION=evening;   ALLOW_RECAP=0 ;;
             15) EDITION=night;     ALLOW_RECAP=1 ;;
-            16) EDITION=night;     ALLOW_RECAP=0 ;;
+            16) SECOND_HOUR=1; EDITION=night;     ALLOW_RECAP=0 ;;
             *)  EDITION=; ;;
           esac
 
