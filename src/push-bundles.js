@@ -175,9 +175,9 @@ async function pushDesk(desk) {
 }
 
 /** Telegram album: the same posters, caption on the first item. */
-async function pushTelegram(desk, data) {
+async function pushTelegram(desk, data, given) {
   if (!telegram.enabled) return { skipped: 'telegram channel not configured' }
-  const stories = data.stories || []
+  const stories = given || data.stories || []
   if (!stories.length) return { skipped: 'empty' }
 
   const media = stories.slice(0, 10).map((s, i) => ({
@@ -259,7 +259,7 @@ async function recapStories(limit) {
       const link = ((chunk.match(/<link>([^<]+)<\/link>/) || [])[1] || '').trim()
       const slug = link.split('/article/')[1] || ''
       const category = ((chunk.match(/<category>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/category>/) || [])[1] || '').trim()
-      return { title, slug, category, excerpt: '', cards: { poster: `${SITE}/api/poster?slug=${encodeURIComponent(slug)}` } }
+      return { title, slug, category, excerpt: '', cards: { poster: `${SITE}/api/poster2?slug=${encodeURIComponent(slug)}` } }
     })
     .filter((s) => s.title && s.slug)
 }
@@ -343,7 +343,7 @@ async function pushMixed() {
 
   let tg = null
   try {
-    tg = await pushTelegram('mixed', data)
+    tg = await pushTelegram('mixed', data, stories)
   } catch (err) {
     tg = { error: String(err).slice(0, 120) }
   }

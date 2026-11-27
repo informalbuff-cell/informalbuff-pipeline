@@ -159,7 +159,9 @@ for (const [i, s] of rows.entries()) {
   })
 }
 
-// The publisher needs the lead slug to render the cover thumbnail.
+// The publisher needs the lead slug to render the cover thumbnail. out/ is
+// absent on a fresh CI checkout, and writeFileSync will not create it.
+mkdirSync('out', { recursive: true })
 writeFileSync('out/cover-slug.txt', String(rows[0]?.slug || ''))
 writeFileSync('out/cover-slugs.txt', rows.slice(0, 3).map((r) => r.slug).join(','))
 
