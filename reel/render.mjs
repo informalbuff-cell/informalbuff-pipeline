@@ -7,12 +7,22 @@
  * a carousel never disagree about the day's news.
  */
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 const SITE = (process.env.SITE_URL || 'https://informalbuff.vercel.app').replace(/\/$/, '')
 const INGEST_KEY = process.env.INGEST_API_KEY || ''
-const AUDIO = process.env.REEL_AUDIO || null
+/**
+ * The bed is part of the product, so it is on by default when the file is
+ * there. Relying on REEL_AUDIO alone broke once when the step moved between
+ * workflows and the variable stayed behind.
+ */
+const DEFAULT_AUDIO = 'music/bed.mp3'
+const AUDIO_OVERRIDE = process.env.REEL_AUDIO
+const AUDIO =
+  AUDIO_OVERRIDE === 'none'
+    ? null
+    : AUDIO_OVERRIDE || (existsSync(resolve('public', DEFAULT_AUDIO)) ? DEFAULT_AUDIO : null)
 const OUT = process.argv.includes('--out')
   ? process.argv[process.argv.indexOf('--out') + 1]
   : 'out/reel.mp4'
