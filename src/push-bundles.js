@@ -120,7 +120,7 @@ async function pushDesk(desk) {
   // every large news account uses — a poster alone is unreadable at feed size.
   // Slide one is the split card (photo + three facts) — the layout that stops
   // the scroll. Posters carry the detail behind it.
-  const splitCard = stories[0]?.cards?.split || stories[0]?.cards?.line
+  const splitCard = null
   // Six slides, not ten: each Instagram image costs two API calls (create +
   // poll) and a ten-image carousel is what keeps tripping the app-level rate
   // limit. Six reads better on a phone anyway.
@@ -336,10 +336,9 @@ async function pushMixed() {
 
   if (DRY_RUN) return { dryRun: true, count: stories.length }
 
-  // Slide one is the split card, exactly like the desk push. Posters alone read
-  // as the old format in the feed.
-  const splitLead = stories[0]?.cards?.split || stories[0]?.cards?.line
-  const images = [...(splitLead ? [splitLead] : []), ...stories.map((s) => s.cards.poster)].slice(0, 6)
+  // The dense card is the image; the carousel is the story set, not a teaser.
+  // Six slides: ten images is twenty API calls and that is what trips limits.
+  const images = stories.map((s) => s.cards.poster).slice(0, 6)
   const slugs = stories.map((s) => s.slug)
 
   let tg = null
