@@ -103,7 +103,7 @@ const Hook: React.FC<{ hook: string; kicker: string }> = ({ hook, kicker }) => {
   )
 }
 
-const StoryCard: React.FC<{ story: Story; index: number; split?: boolean }> = ({ story, index, split }) => {
+const StoryCard: React.FC<{ story: Story; index: number; split?: boolean; total?: number }> = ({ story, index, split, total = 3 }) => {
   const frame = useCurrentFrame()
 
   // Split cards already contain the headline, facts and branding, so they fill
@@ -129,7 +129,7 @@ const StoryCard: React.FC<{ story: Story; index: number; split?: boolean }> = ({
             padding: '10px 18px',
           }}
         >
-          {index + 1}/3
+          {index + 1}/{total}
         </div>
       </AbsoluteFill>
     )
@@ -480,7 +480,7 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
           from={HOOK_FRAMES + i * STORY_FRAMES}
           durationInFrames={STORY_FRAMES}
         >
-          <StoryCard story={story} index={i} split={style === 'split'} />
+          <StoryCard story={story} index={i} split={style === 'split'} total={shown.length} />
         </Sequence>
       ))}
 
