@@ -5,3 +5,4 @@ reel/props.json
 reel/public/music/*.wav
 reel/public/*.png
 last-bundle.json
+edition-published.json

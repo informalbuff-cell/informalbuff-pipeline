@@ -67,7 +67,7 @@ if (DRY_RUN) {
  * Delayed runs are routine on GitHub. If Instagram posted within the last 20
  * minutes, this reel would duplicate the edition that just shipped, so skip.
  */
-async function recentlyPosted(token, igUserId, minutes = 20) {
+async function recentlyPosted(token, igUserId, minutes = 180) {
   try {
     const res = await fetch(
       `https://graph.facebook.com/v21.0/${igUserId}/media?fields=timestamp,media_type&limit=1&access_token=${token}`,

@@ -131,6 +131,13 @@ jobs:
             00|01|07|08|12|13|15|16) ;;
             *) echo "not an edition window — no reel"; exit 0 ;;
           esac
+          # No carousel published by this run means no edition, so no reel. This
+          # is what duplicated reels on 27 Nov: the push skipped and the reel
+          # still went out.
+          if [ ! -f edition-published.json ]; then
+            echo "no edition published this run — no reel"
+            exit 0
+          fi
           # The runner image has no ffmpeg; the audio check and the trim need it.
           command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           cd reel
