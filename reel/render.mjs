@@ -135,6 +135,9 @@ for (const [i, s] of rows.entries()) {
   })
 }
 
+// The publisher needs the lead slug to render the cover thumbnail.
+writeFileSync('out/cover-slug.txt', String(rows[0]?.slug || ''))
+
 const props = {
   hook: toHook(rows),
   kicker: 'InformalBuff',

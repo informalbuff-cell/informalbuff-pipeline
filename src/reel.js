@@ -65,14 +65,18 @@ async function waitForContainer(id, token, tries = 40) {
   throw new Error('reel container timed out')
 }
 
-export async function publishReel({ igUserId, token, videoUrl, caption }) {
-  const container = await graph(`${igUserId}/media`, {
+export async function publishReel({ igUserId, token, videoUrl, caption, coverUrl }) {
+  const body = {
     media_type: 'REELS',
     video_url: videoUrl,
     caption,
     share_to_feed: 'true',
     access_token: token,
-  })
+  }
+  // A designed cover beats the default first frame in the profile grid.
+  if (coverUrl) body.cover_url = coverUrl
+
+  const container = await graph(`${igUserId}/media`, body)
   await waitForContainer(container.id, token)
   const published = await graph(`${igUserId}/media_publish`, {
     creation_id: container.id,

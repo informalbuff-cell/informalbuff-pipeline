@@ -7,6 +7,8 @@ import { postVideoToFacebookPage, publishReel, sendVideoToTelegram, uploadVideoT
 import { r2Configured, uploadToR2 } from './r2.js'
 import { releaseHostingConfigured, uploadReelToGitHub } from './gh-release.js'
 
+const SITE = process.env.SITE_URL || 'https://informalbuff.vercel.app'
+
 const OUT = process.env.REEL_OUT || 'reel/out/reel.mp4'
 const IG_USER_ID = process.env.IG_USER_ID
 const TOKEN = process.env.META_PAGE_TOKEN
@@ -86,7 +88,14 @@ if (releaseHostingConfigured()) {
 const result = { videoUrl, igReelId: null, fbVideoId: null, telegram: null }
 
 try {
-  result.igReelId = await publishReel({ igUserId: IG_USER_ID, token: TOKEN, videoUrl, caption })
+  // Cover: the hook card for this edition's lead story, when we know it.
+  let coverUrl = process.env.REEL_COVER_URL || null
+  if (!coverUrl) {
+    const lead = process.env.REEL_COVER_SLUG
+    if (lead) coverUrl = `${SITE}/api/cover?slug=${encodeURIComponent(lead)}`
+  }
+  result.igReelId = await publishReel({ igUserId: IG_USER_ID, token: TOKEN, videoUrl, caption, coverUrl })
+  if (coverUrl) result.coverUrl = coverUrl
 } catch (err) {
   console.error(`instagram failed: ${String(err).slice(0, 160)}`)
 }

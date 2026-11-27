@@ -134,4 +134,5 @@ jobs:
           if ! ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 reel/out/reel.mp4 | grep -q audio; then
             echo "reel has no audio stream — not publishing"; exit 0
           fi
-          node src/publish-reel.js || echo "reel publish failed — carousel already shipped"
+          REEL_COVER_SLUG=$(cat reel/out/cover-slug.txt 2>/dev/null || true) \
+            node src/publish-reel.js || echo "reel publish failed — carousel already shipped"
