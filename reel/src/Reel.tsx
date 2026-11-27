@@ -25,6 +25,7 @@ export type ReelProps = {
   audio: string | null
   handle: string
   site: string
+  style?: 'poster' | 'split'
 }
 
 const INK = '#0b0b10'
@@ -98,8 +99,24 @@ const Hook: React.FC<{ hook: string; kicker: string }> = ({ hook, kicker }) => {
   )
 }
 
-const StoryCard: React.FC<{ story: Story; index: number }> = ({ story, index }) => {
+const StoryCard: React.FC<{ story: Story; index: number; split?: boolean }> = ({ story, index, split }) => {
   const frame = useCurrentFrame()
+
+  // Split cards already contain the headline, facts and branding, so they fill
+  // the frame on their own — no wash, no chip, no extra title.
+  if (split && story.image) {
+    const push = interpolate(frame, [0, STORY_FRAMES], [1, 1.05], { extrapolateRight: 'clamp' })
+    const fade = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' })
+    return (
+      <AbsoluteFill style={{ background: INK, opacity: fade }}>
+        <Img
+          src={story.image.startsWith('http') ? story.image : staticFile(story.image)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${push})` }}
+        />
+      </AbsoluteFill>
+    )
+  }
+
   const wash = story.wash || WASH[index % WASH.length]
   const title = fitTitle(story.title)
   // A slow drift keeps the frame alive without making text harder to read.
@@ -138,21 +155,38 @@ const StoryCard: React.FC<{ story: Story; index: number }> = ({ story, index }) 
         }}
       >
         {story.image ? (
-          <Img
-            src={story.image.startsWith('http') ? story.image : staticFile(story.image)}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              border: `5px solid ${INK}`,
-              boxShadow: `12px 12px 0 ${INK}`,
-              background: PAPER,
-            }}
-          />
+          split ? (
+            /* The split card already carries the headline and facts, so it fills
+               the frame with a slow push instead of sitting inside a border. */
+            <Img
+              src={story.image.startsWith('http') ? story.image : staticFile(story.image)}
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                transform: `scale(${interpolate(frame, [0, STORY_FRAMES], [1, 1.06], {
+                  extrapolateRight: 'clamp',
+                })})`,
+              }}
+            />
+          ) : (
+            <Img
+              src={story.image.startsWith('http') ? story.image : staticFile(story.image)}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                border: `5px solid ${INK}`,
+                boxShadow: `12px 12px 0 ${INK}`,
+                background: PAPER,
+              }}
+            />
+          )
         ) : null}
       </div>
 
-      {story.line ? (
+      {story.line && !split ? (
         <div
           style={{
             marginTop: 28,
@@ -232,7 +266,7 @@ function fitTitle(title: string) {
   return { text: cut, size: cut.length > 70 ? 46 : cut.length > 52 ? 52 : 62 }
 }
 
-export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site }) => {
+export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site, style }) => {
   const { durationInFrames } = useVideoConfig()
   const shown = stories.slice(0, 3)
 
@@ -251,7 +285,7 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
           from={HOOK_FRAMES + i * STORY_FRAMES}
           durationInFrames={STORY_FRAMES}
         >
-          <StoryCard story={story} index={i} />
+          <StoryCard story={story} index={i} split={style === 'split'} />
         </Sequence>
       ))}
 

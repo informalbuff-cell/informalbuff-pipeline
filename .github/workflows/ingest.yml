@@ -117,6 +117,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Without this the reel renders silent — it happened on 27 Nov.
           REEL_AUDIO: 'music/bed.mp3'
+          # The reel uses the same split cards as the carousel so both formats
+          # look like one product.
+          REEL_STYLE: 'split'
         run: |
           HOUR=$(date -u +%H)
           case "$HOUR" in

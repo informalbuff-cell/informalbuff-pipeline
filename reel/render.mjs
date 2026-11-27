@@ -94,9 +94,15 @@ if (!rows.length) {
  */
 mkdirSync('public/posters', { recursive: true })
 
+// REEL_STYLE=split uses the photographic split card as the frame instead of the
+// editorial poster, so the reel looks like the carousel people just scrolled.
+const STYLE = process.env.REEL_STYLE || 'poster'
 const stories = []
 for (const [i, s] of rows.entries()) {
-  const src = s.cards?.poster || `${SITE}/api/poster?slug=${encodeURIComponent(s.slug)}`
+  const src =
+    STYLE === 'split'
+      ? s.cards?.split ? `${s.cards.split}&format=story` : `${SITE}/api/split?slug=${encodeURIComponent(s.slug)}&format=story`
+      : s.cards?.poster || `${SITE}/api/poster?slug=${encodeURIComponent(s.slug)}`
   const file = `public/posters/story-${i}.png`
   const img = await fetch(src)
   if (!img.ok) throw new Error(`poster ${i}: ${img.status}`)
@@ -117,6 +123,7 @@ const props = {
   handle: '@informal.buff',
   site: 'informalbuff.vercel.app',
   audio: AUDIO,
+  style: STYLE,
   stories,
 }
 
