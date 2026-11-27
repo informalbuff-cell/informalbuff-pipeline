@@ -68,13 +68,35 @@ function whyLine(html = '') {
   return sentence.length > 120 ? `${sentence.slice(0, 117)}…` : sentence
 }
 
-const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=3&platform=instagram&edition=evening`, {
-  headers: { 'x-ingest-key': INGEST_KEY },
-})
-const data = await res.json()
-if (!data.ok) throw new Error(`bundle: ${data.error}`)
+/**
+ * The carousel and the reel must tell the same three stories. push-bundles
+ * writes last-bundle.json as it publishes; prefer that over a second bundle
+ * call, which returns nothing once the stories are marked pushed.
+ */
+let rows = []
+let bundleNote = ''
+if (existsSync('last-bundle.json')) {
+  try {
+    const saved = JSON.parse(readFileSync('last-bundle.json', 'utf8'))
+    const ageMinutes = (Date.now() - new Date(saved.at).getTime()) / 60000
+    if (Array.isArray(saved.stories) && saved.stories.length && ageMinutes < 180) {
+      rows = saved.stories.slice(0, 3)
+      bundleNote = `using the carousel bundle (${Math.round(ageMinutes)} min old)`
+    }
+  } catch (err) {
+    console.log(`last-bundle.json unreadable: ${err.message}`)
+  }
+}
 
-let rows = (data.stories || []).slice(0, 3)
+if (!rows.length) {
+  const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=3&platform=instagram&edition=evening`, {
+    headers: { 'x-ingest-key': INGEST_KEY },
+  })
+  const data = await res.json()
+  if (!data.ok) throw new Error(`bundle: ${data.error}`)
+  rows = (data.stories || []).slice(0, 3)
+}
+if (bundleNote) console.log(bundleNote)
 
 /**
  * Outside the edition window everything is already marked as pushed, so fall

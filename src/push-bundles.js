@@ -9,6 +9,7 @@
  * Instagram gets a carousel (max ten); Facebook gets the same images as a
  * multi-photo post.
  */
+import { writeFileSync } from 'node:fs'
 import { SITE, meta, INGEST_KEY, telegram } from './config.js'
 import { humanize, lintCaption } from './ig-copy.js'
 
@@ -291,6 +292,21 @@ async function pushMixed() {
   }
 
   let stories = data.stories || []
+
+  // The reel must show the same stories as the carousel. Publish order and the
+  // pushed flags make a second bundle call unreliable, so the reel reads this.
+  try {
+    writeFileSync(
+      'last-bundle.json',
+      JSON.stringify({
+        edition,
+        at: new Date().toISOString(),
+        stories: stories.slice(0, 3).map((s) => ({ slug: s.slug, title: s.title, cards: s.cards })),
+      }),
+    )
+  } catch (err) {
+    log(`could not write last-bundle.json: ${err.message}`)
+  }
 
   /**
    * A slot with nothing new is covered by a recap of the day's biggest
