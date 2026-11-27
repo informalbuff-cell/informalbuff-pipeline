@@ -99,12 +99,14 @@ async function pushDesk(desk) {
 
   // Slide 1 is the one-line hook card; the posters follow. This is the format
   // every large news account uses — a poster alone is unreadable at feed size.
-  const lineCard = stories[0]?.cards?.line
+  // Slide one is the split card (photo + three facts) — the layout that stops
+  // the scroll. Posters carry the detail behind it.
+  const splitCard = stories[0]?.cards?.split || stories[0]?.cards?.line
   // Six slides, not ten: each Instagram image costs two API calls (create +
   // poll) and a ten-image carousel is what keeps tripping the app-level rate
   // limit. Six reads better on a phone anyway.
   const images = [
-    ...(lineCard ? [lineCard] : []),
+    ...(splitCard ? [splitCard] : []),
     ...stories.map((s) => s.cards.poster),
   ].slice(0, 6)
   const caption = data.captions.instagram
