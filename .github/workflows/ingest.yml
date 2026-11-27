@@ -5,6 +5,11 @@ on:
     # Hourly: sparse crons get dropped by GitHub's scheduler; hourly fires reliably.
     - cron: '5 * * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Render and validate without publishing'
+        type: boolean
+        default: false
 
 concurrency:
   group: ingest
