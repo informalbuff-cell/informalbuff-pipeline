@@ -2,7 +2,7 @@
  * One command: render the day's reel, host it, publish it to Instagram.
  * Runs from the reel workflow only, so it can never block the carousel push.
  */
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { postVideoToFacebookPage, publishReel, sendVideoToTelegram, uploadVideoToCloudinary } from './reel.js'
 import { r2Configured, uploadToR2 } from './r2.js'
 import { releaseHostingConfigured, uploadReelToGitHub } from './gh-release.js'
@@ -28,7 +28,20 @@ const istHour = Number(
 )
 const partOfDay = istHour < 11 ? 'morning' : istHour < 16 ? 'afternoon' : istHour < 21 ? 'evening' : 'night'
 
-const caption = humanize(`The three stories worth your ${partOfDay} - in 30 seconds.
+// Say the real number: a two-story reel that promises three is a lie at the
+// exact moment someone decides whether to trust the account.
+let storyCount = 3
+for (const f of ['last-bundle.json', '../last-bundle.json']) {
+  if (!existsSync(f)) continue
+  try {
+    const saved = JSON.parse(readFileSync(f, 'utf8'))
+    if (Array.isArray(saved.stories) && saved.stories.length) storyCount = saved.stories.length
+    break
+  } catch {}
+}
+const countWord = ['one', 'two', 'three', 'four'][storyCount - 1] || String(storyCount)
+
+const caption = humanize(`The ${countWord} stories worth your ${partOfDay} - in 30 seconds.
 
 Full briefs, sources and context → informalbuff.vercel.app
 
@@ -129,5 +142,9 @@ try {
 } catch (err) {
   console.error(`telegram failed: ${String(err).slice(0, 160)}`)
 }
+
+// A green run that posted nothing is worse than a red one: the slot looks
+// delivered when it is not. Non-zero exit makes GitHub show the miss.
+if (!result.igReelId) process.exitCode = 1
 
 console.log(JSON.stringify(result))

@@ -133,12 +133,18 @@ jobs:
           esac
           cd reel
           npm ci --prefer-offline --no-audit --no-fund
-          node render.mjs --out out/reel.mp4 || { echo "render failed"; exit 0; }
+          node render.mjs --out out/reel.mp4 || { echo "::error::reel render failed"; exit 1; }
           cd ..
           # A silent reel is a broken reel; never publish one.
           if ! ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 reel/out/reel.mp4 | grep -q audio; then
-            echo "reel has no audio stream — not publishing"; exit 0
+            echo "::error::reel has no audio stream"; exit 1
           fi
-          REEL_COVER_SLUGS=$(cat reel/out/cover-slugs.txt 2>/dev/null || true) \
-          REEL_COVER_SLUG=$(cat reel/out/cover-slug.txt 2>/dev/null || true) \
-            node src/publish-reel.js || echo "reel publish failed — carousel already shipped"
+          export REEL_COVER_SLUGS=$(cat reel/out/cover-slugs.txt 2>/dev/null || true)
+          export REEL_COVER_SLUG=$(cat reel/out/cover-slug.txt 2>/dev/null || true)
+          # One retry covers a throttle that clears in seconds; past that the run
+          # goes red so the slot is visibly missed instead of silently lost.
+          if ! node src/publish-reel.js; then
+            echo "reel publish failed — retrying once"
+            sleep 30
+            node src/publish-reel.js || { echo "::error::reel did not publish"; exit 1; }
+          fi
