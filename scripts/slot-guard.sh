@@ -19,15 +19,20 @@ set +a
 GH_TOKEN=$(printf "protocol=https\nhost=github.com\n\n" | git credential fill 2>/dev/null | grep '^password=' | cut -d= -f2-)
 [ -z "${GH_TOKEN:-}" ] && { say "no github token"; exit 0; }
 
-# Which slot just happened? Script is scheduled at :25 past each slot hour.
-HOUR_IST=$(TZ=Asia/Kolkata date +%H)
-case "$HOUR_IST" in
-  05) SLOT="morning" ;;
-  12) SLOT="afternoon" ;;
-  17) SLOT="evening" ;;
-  20) SLOT="night" ;;
-  *)  SLOT="" ;;
-esac
+# Which slot are we responsible for? Any slot that finished 70-200 minutes
+# ago: GitHub delays runs by up to 50 minutes, so acting earlier than that
+# would race the scheduler instead of covering for it.
+SLOT=""
+SLOT_AGE=0
+NOW_EPOCH=$(date +%s)
+for spec in "05:30 morning" "12:30 afternoon" "17:30 evening" "20:30 night"; do
+  set -- $spec
+  HHMM="$1"; NAME="$2"
+  SLOT_EPOCH=$(TZ=Asia/Kolkata date -j -f "%Y-%m-%d %H:%M" "$(TZ=Asia/Kolkata date +%Y-%m-%d) $HHMM" +%s 2>/dev/null)
+  [ -z "$SLOT_EPOCH" ] && continue
+  AGE=$(( (NOW_EPOCH - SLOT_EPOCH) / 60 ))
+  if [ "$AGE" -ge 70 ] && [ "$AGE" -le 200 ]; then SLOT="$NAME"; SLOT_AGE=$AGE; fi
+done
 [ -z "$SLOT" ] && exit 0
 
 # Latest Instagram post
@@ -47,8 +52,8 @@ PY
 )
 fi
 
-if [ "$AGE_MIN" -lt 50 ]; then
-  say "$SLOT ok — last post ${AGE_MIN}m ago"
+if [ "$AGE_MIN" -le "$SLOT_AGE" ]; then
+  say "$SLOT ok — posted ${AGE_MIN}m ago, slot is ${SLOT_AGE}m old"
   exit 0
 fi
 
