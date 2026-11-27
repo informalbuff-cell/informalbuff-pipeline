@@ -60,12 +60,13 @@ async function recentlyPosted(token, igUserId, minutes = 20) {
       `https://graph.facebook.com/v21.0/${igUserId}/media?fields=timestamp,media_type&limit=1&access_token=${token}`,
     )
     const json = await res.json()
-    const item = json?.data?.[0]
-    if (!item?.timestamp) return false
-    // Only a recent *video* means a reel already shipped. A carousel from the
-    // same slot must not block the reel that is supposed to follow it.
-    if (item.media_type !== 'VIDEO') return false
-    return Date.now() - new Date(item.timestamp).getTime() < minutes * 60 * 1000
+    const last = json?.data?.[0]
+    if (!last?.timestamp) return false
+    // Only a recent REEL blocks another reel. A carousel posted a minute ago is
+    // the very thing this reel belongs to.
+    if (last.media_type !== 'VIDEO') return false
+    const age = (Date.now() - new Date(last.timestamp).getTime()) / 60000
+    return age < minutes
   } catch {
     return false
   }

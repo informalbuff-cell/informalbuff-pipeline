@@ -91,6 +91,23 @@ async function waitFor(id) {
   throw new Error(`ig container ${id} timed out`)
 }
 
+
+/** Hand the published stories to the reel renderer, whichever path ran. */
+function recordBundle(stories) {
+  try {
+    writeFileSync(
+      'last-bundle.json',
+      JSON.stringify({
+        edition,
+        at: new Date().toISOString(),
+        stories: stories.slice(0, 3).map((s) => ({ slug: s.slug, title: s.title, cards: s.cards })),
+      }),
+    )
+  } catch (err) {
+    console.log(`could not write last-bundle.json: ${err.message}`)
+  }
+}
+
 async function pushDesk(desk) {
   const data = await bundle(desk)
   const stories = data.stories || []
@@ -118,6 +135,7 @@ async function pushDesk(desk) {
   if (captionIssues.length) log(`${desk}: caption — ${captionIssues.join(', ')}`)
   log(`${desk}: ${stories.length} stories → ${images.length} images`)
 
+  recordBundle(stories)
   if (DRY_RUN) return { desk, dryRun: true, count: images.length, caption: caption.slice(0, 80) }
   if (SKIP_META) return { desk, count: images.length, skippedMeta: true }
 
@@ -189,6 +207,7 @@ async function pushSignature() {
   if (!stories.length) return { skipped: 'no stories in 24h' }
   log(`signature: ${stories.length} desks → ${stories.length} images`)
 
+  recordBundle(stories)
   if (DRY_RUN) return { dryRun: true, count: stories.length }
   if (SKIP_META) return { count: stories.length, skippedMeta: true }
 
@@ -313,21 +332,7 @@ async function pushMixed() {
 
   log(`mixed: ${stories.length} stories across ${new Set(stories.map(s => s.category)).size} desks`)
 
-  // The reel must show the same stories as the carousel. Publish marks them
-  // pushed, so a second bundle call comes back empty; hand the list over here,
-  // after the recap fallback has filled it.
-  try {
-    writeFileSync(
-      'last-bundle.json',
-      JSON.stringify({
-        edition,
-        at: new Date().toISOString(),
-        stories: stories.slice(0, 3).map((s) => ({ slug: s.slug, title: s.title, cards: s.cards })),
-      }),
-    )
-  } catch (err) {
-    log(`could not write last-bundle.json: ${err.message}`)
-  }
+  recordBundle(stories)
 
   if (DRY_RUN) return { dryRun: true, count: stories.length }
 
