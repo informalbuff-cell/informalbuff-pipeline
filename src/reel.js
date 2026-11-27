@@ -76,7 +76,19 @@ export async function publishReel({ igUserId, token, videoUrl, caption, coverUrl
   // A designed cover beats the default first frame in the profile grid.
   if (coverUrl) body.cover_url = coverUrl
 
-  const container = await graph(`${igUserId}/media`, body)
+  let container
+  try {
+    container = await graph(`${igUserId}/media`, body)
+  } catch (err) {
+    // A bad cover URL must not cost the reel; retry without it.
+    if (coverUrl) {
+      console.warn(`cover rejected (${err.message}) — retrying without it`)
+      delete body.cover_url
+      container = await graph(`${igUserId}/media`, body)
+    } else {
+      throw err
+    }
+  }
   await waitForContainer(container.id, token)
   const published = await graph(`${igUserId}/media_publish`, {
     creation_id: container.id,
