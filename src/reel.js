@@ -94,19 +94,37 @@ export async function postVideoToFacebookPage({ pageId, token, videoUrl, descrip
 }
 
 /** Telegram: the same MP4 as a native video, plays inline in the channel. */
-export async function sendVideoToTelegram({ token, chatId, videoUrl, caption }) {
+export async function sendVideoToTelegram({ token, chatId, videoUrl, caption, file }) {
   if (!token || !chatId) throw new Error('telegram not configured')
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      video: videoUrl,
-      caption,
-      supports_streaming: true,
-    }),
-  })
-  const json = await res.json()
+
+  async function attempt(body, headers) {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+      method: 'POST',
+      headers,
+      body,
+    })
+    const json = await res.json()
+    return json
+  }
+
+  // URL first; GitHub release downloads redirect and Telegram sometimes refuses
+  // them, so fall back to uploading the bytes directly.
+  let json = await attempt(
+    JSON.stringify({ chat_id: chatId, video: videoUrl, caption, supports_streaming: true }),
+    { 'content-type': 'application/json' },
+  )
+
+  if (!json.ok && file) {
+    const { readFile } = await import('node:fs/promises')
+    const bytes = await readFile(file)
+    const form = new FormData()
+    form.append('chat_id', String(chatId))
+    form.append('caption', caption || '')
+    form.append('supports_streaming', 'true')
+    form.append('video', new Blob([bytes], { type: 'video/mp4' }), 'reel.mp4')
+    json = await attempt(form, undefined)
+  }
+
   if (!json.ok) throw new Error(json.description)
   return { ok: true, messageId: json.result.message_id }
 }

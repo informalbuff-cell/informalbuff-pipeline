@@ -107,7 +107,8 @@ try {
     token: process.env.TELEGRAM_BOT_TOKEN,
     chatId: process.env.TELEGRAM_CHANNEL,
     videoUrl,
-    caption: 'The three stories worth your evening — in 30 seconds.',
+    file: OUT,
+    caption: `The three stories worth your ${partOfDay} — in 30 seconds.`,
   })
 } catch (err) {
   console.error(`telegram failed: ${String(err).slice(0, 160)}`)
