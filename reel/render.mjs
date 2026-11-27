@@ -137,6 +137,7 @@ for (const [i, s] of rows.entries()) {
 
 // The publisher needs the lead slug to render the cover thumbnail.
 writeFileSync('out/cover-slug.txt', String(rows[0]?.slug || ''))
+writeFileSync('out/cover-slugs.txt', rows.slice(0, 3).map((r) => r.slug).join(','))
 
 // Hook frame wants the raw photo, not the card that already carries text.
 let heroImage = null

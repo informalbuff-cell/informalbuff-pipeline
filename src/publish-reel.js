@@ -91,8 +91,10 @@ try {
   // Cover: the hook card for this edition's lead story, when we know it.
   let coverUrl = process.env.REEL_COVER_URL || null
   if (!coverUrl) {
+    const many = process.env.REEL_COVER_SLUGS
     const lead = process.env.REEL_COVER_SLUG
-    if (lead) coverUrl = `${SITE}/api/cover?slug=${encodeURIComponent(lead)}`
+    if (many) coverUrl = `${SITE}/api/cover?slugs=${many.split(',').map(encodeURIComponent).join(',')}`
+    else if (lead) coverUrl = `${SITE}/api/cover?slug=${encodeURIComponent(lead)}`
   }
   result.igReelId = await publishReel({ igUserId: IG_USER_ID, token: TOKEN, videoUrl, caption, coverUrl })
   if (coverUrl) result.coverUrl = coverUrl
