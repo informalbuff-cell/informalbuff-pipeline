@@ -10,6 +10,7 @@
  * multi-photo post.
  */
 import { SITE, meta, INGEST_KEY, telegram } from './config.js'
+import { humanize, lintCaption } from './ig-copy.js'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const CLOUD = process.env.CLOUDINARY_CLOUD || 'sq9i1aty'
@@ -109,7 +110,11 @@ async function pushDesk(desk) {
     ...(splitCard ? [splitCard] : []),
     ...stories.map((s) => s.cards.poster),
   ].slice(0, 6)
-  const caption = data.captions.instagram
+  // Machine-written captions carry tells (dashes, slop verbs). Clean them
+  // before they reach the feed and say so when the first line is too long.
+  const caption = humanize(data.captions.instagram)
+  const captionIssues = lintCaption(caption)
+  if (captionIssues.length) log(`${desk}: caption — ${captionIssues.join(', ')}`)
   log(`${desk}: ${stories.length} stories → ${images.length} images`)
 
   if (DRY_RUN) return { desk, dryRun: true, count: images.length, caption: caption.slice(0, 80) }

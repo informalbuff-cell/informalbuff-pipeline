@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs'
 import { postVideoToFacebookPage, publishReel, sendVideoToTelegram, uploadVideoToCloudinary } from './reel.js'
 import { r2Configured, uploadToR2 } from './r2.js'
 import { releaseHostingConfigured, uploadReelToGitHub } from './gh-release.js'
+import { humanize } from './ig-copy.js'
 
 const SITE = process.env.SITE_URL || 'https://informalbuff.vercel.app'
 
@@ -27,11 +28,11 @@ const istHour = Number(
 )
 const partOfDay = istHour < 11 ? 'morning' : istHour < 16 ? 'afternoon' : istHour < 21 ? 'evening' : 'night'
 
-const caption = `The three stories worth your ${partOfDay} — in 30 seconds.
+const caption = humanize(`The three stories worth your ${partOfDay} - in 30 seconds.
 
 Full briefs, sources and context → informalbuff.vercel.app
 
-#news #india #tech #business #worldnews #informalbuff`
+#news #india #tech #business #worldnews #informalbuff`)
 
 // Cover: the front-page card for this edition, built from the post's own slugs.
 let coverUrl = process.env.REEL_COVER_URL || null
