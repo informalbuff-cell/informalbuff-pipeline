@@ -57,6 +57,29 @@ if [ "$AGE_MIN" -le "$SLOT_AGE" ]; then
   exit 0
 fi
 
+# A run may already be queued or working — dispatching again posts twice.
+RECENT=$(curl -s -m 20 \
+  -H "Authorization: Bearer $GH_TOKEN" \
+  "https://api.github.com/repos/informalbuff-cell/informalbuff-pipeline/actions/runs?per_page=5" \
+  | python3 -c '
+import sys, json, datetime
+d = json.load(sys.stdin).get("workflow_runs", [])
+now = datetime.datetime.now(datetime.timezone.utc)
+for r in d:
+    if r.get("status") in ("queued", "in_progress", "pending"):
+        print("busy"); break
+    if r.get("conclusion") == "success":
+        t = datetime.datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))
+        if (now - t).total_seconds() < 1800:
+            print("justran")
+        break
+' 2>/dev/null)
+
+if [ -n "$RECENT" ]; then
+  say "$SLOT still missing, but a run is $RECENT — not dispatching again"
+  exit 0
+fi
+
 say "$SLOT MISSING — last post ${AGE_MIN}m ago, dispatching"
 curl -s -m 30 -X POST \
   -H "Authorization: Bearer $GH_TOKEN" \
