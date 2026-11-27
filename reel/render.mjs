@@ -75,9 +75,11 @@ function whyLine(html = '') {
  */
 let rows = []
 let bundleNote = ''
-if (existsSync('last-bundle.json')) {
+// The renderer runs from reel/, the publisher writes from the repo root.
+const bundleFile = ['last-bundle.json', '../last-bundle.json'].find((f) => existsSync(f))
+if (bundleFile) {
   try {
-    const saved = JSON.parse(readFileSync('last-bundle.json', 'utf8'))
+    const saved = JSON.parse(readFileSync(bundleFile, 'utf8'))
     const ageMinutes = (Date.now() - new Date(saved.at).getTime()) / 60000
     if (Array.isArray(saved.stories) && saved.stories.length && ageMinutes < 180) {
       rows = saved.stories.slice(0, 3)
