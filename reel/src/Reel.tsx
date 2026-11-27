@@ -114,9 +114,23 @@ const StoryCard: React.FC<{ story: Story; index: number; split?: boolean }> = ({
     return (
       <AbsoluteFill style={{ background: INK, opacity: fade }}>
         <Img
-          src={story.image.startsWith('http') ? story.image : staticFile(story.image)}
+          src={story.image.startsWith('http' ) ? story.image : staticFile(story.image)}
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${push})` }}
         />
+        <div
+          style={{
+            position: 'absolute',
+            top: 150,
+            right: 40,
+            background: YELLOW,
+            color: INK,
+            fontSize: 30,
+            fontWeight: 900,
+            padding: '10px 18px',
+          }}
+        >
+          {index + 1}/3
+        </div>
       </AbsoluteFill>
     )
   }
@@ -281,6 +295,18 @@ function hookNumber(title: string) {
 
 const HookFrame: React.FC<{ hook: string; image?: string }> = ({ hook, image }) => {
   const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const pop = spring({ frame, fps, config: { damping: 12, mass: 0.6 } })
+  const countUp = (raw: string | null) => {
+    if (!raw) return raw
+    const m = raw.match(/([\d.]+)/)
+    if (!m) return raw
+    const target = Number(m[1])
+    if (!Number.isFinite(target)) return raw
+    const decimals = m[1].includes('.') ? 1 : 0
+    const value = interpolate(frame, [0, 26], [0, target], { extrapolateRight: 'clamp' })
+    return raw.replace(m[1], value.toFixed(decimals))
+  }
   const zoom = interpolate(frame, [0, HOOK_FRAMES], [1.12, 1.0], { extrapolateRight: 'clamp' })
   const num = hookNumber(hook)
   const words = (hook || '').replace(/\s+/g, ' ').trim().split(' ')
@@ -335,7 +361,19 @@ const HookFrame: React.FC<{ hook: string; image?: string }> = ({ hook, image }) 
         }}
       >
         {num ? (
-          <div style={{ fontSize: 210, fontWeight: 900, color: YELLOW, lineHeight: 0.9, letterSpacing: -6 }}>{num}</div>
+          <div
+            style={{
+              fontSize: 210,
+              fontWeight: 900,
+              color: YELLOW,
+              lineHeight: 0.9,
+              letterSpacing: -6,
+              transform: `scale(${0.86 + 0.14 * pop})`,
+              transformOrigin: 'left bottom',
+            }}
+          >
+            {countUp(num)}
+          </div>
         ) : null}
         <div
           style={{
@@ -423,7 +461,7 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
       <Progress total={durationInFrames} />
 
       <Sequence from={0} durationInFrames={HOOK_FRAMES}>
-        <HookFrame hook={hook} image={hero || shown[0]?.image} />
+        <HookFrame hook={hook} image={hero || undefined} />
       </Sequence>
 
       {shown.map((story, i) => (
