@@ -298,6 +298,37 @@ async function postedRecently(minutes = 180) {
   }
 }
 
+
+/**
+ * The same lead story two editions running is what readers see as a double
+ * post. Ask Instagram what it published last, and if the planned lead is the
+ * same story, either lead with something else or skip the edition.
+ */
+async function lastPostedLead(minutes = 480) {
+  const token = process.env.META_PAGE_TOKEN
+  const ig = process.env.IG_USER_ID
+  if (!token || !ig) return null
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${ig}/media?fields=caption,timestamp,media_type&limit=5&access_token=${token}`,
+    )
+    const json = await res.json()
+    // Skip reels: their caption is the "N stories worth your evening" template,
+    // so the useful comparison is the last carousel's lead line.
+    const last = (json?.data || []).find(
+      (m) => m?.caption && !/^The .* stories worth your/i.test(m.caption),
+    )
+    if (!last?.caption || !last?.timestamp) return null
+    if (Date.now() - new Date(last.timestamp).getTime() > minutes * 60000) return null
+    return last.caption.split('\n')[0].replace(/…$/, '').trim()
+  } catch {
+    return null
+  }
+}
+
+const sameStory = (a, b) =>
+  Boolean(a && b) && a.toLowerCase().slice(0, 38) === b.toLowerCase().slice(0, 38)
+
 async function pushMixed() {
   const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=10&platform=instagram&edition=${edition}`, {
     headers: { 'x-ingest-key': INGEST_KEY },
@@ -328,6 +359,26 @@ async function pushMixed() {
     if (!stories.length) return { skipped: 'nothing unpublished and no recap available' }
     log(`nothing new — recapping ${stories.length} stories from the day`)
     data.captions = recapCaptions(stories, edition)
+  }
+
+  // One story once: the feed can carry the same headline twice, and the last
+  // edition's lead must not lead again.
+  const seenSlug = new Set()
+  const seenTitle = new Set()
+  stories = stories.filter((s) => {
+    const t = (s.title || '').toLowerCase().replace(/[^a-z0-9 ]+/g, '').slice(0, 60)
+    if (!s.slug || seenSlug.has(s.slug) || seenTitle.has(t)) return false
+    seenSlug.add(s.slug)
+    seenTitle.add(t)
+    return true
+  })
+
+  const previousLead = await lastPostedLead()
+  if (previousLead && stories.length && sameStory(stories[0]?.title, previousLead)) {
+    const alt = stories.find((s) => !sameStory(s.title, previousLead))
+    if (!alt) return { skipped: 'only story is the one already posted' }
+    stories = [alt, ...stories.filter((s) => s !== alt)]
+    log(`lead already posted — leading with "${alt.title.slice(0, 50)}"`)
   }
 
   log(`mixed: ${stories.length} stories across ${new Set(stories.map(s => s.category)).size} desks`)
