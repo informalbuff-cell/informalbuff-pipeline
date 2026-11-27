@@ -335,10 +335,10 @@ async function pushMixed() {
   })
   const data = await res.json()
   if (!data.ok) throw new Error(`mixed: ${data.error}`)
-  // The second hour of an edition window exists to catch a late scheduler run,
-  // not to post the edition twice.
-  if (process.env.SECOND_HOUR === '1' && (await postedRecently(180))) {
-    return { skipped: 'edition already published within 3 hours' }
+  // Spacing is enforced by the clock, not by the window label: whatever hour a
+  // delayed runner lands on, two carousels must never be 40 minutes apart.
+  if (await postedRecently(150)) {
+    return { skipped: 'a carousel posted within the last 2.5 hours' }
   }
 
   let stories = data.stories || []
