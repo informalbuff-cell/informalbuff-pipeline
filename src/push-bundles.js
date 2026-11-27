@@ -289,8 +289,11 @@ async function pushMixed() {
    * A slot with nothing new is covered by a recap of the day's biggest
    * stories instead of going dark. The feed already carries them in order.
    */
-  if (!stories.length && !ALLOW_RECAP) {
-    return { skipped: 'nothing new, and recap is closed for this window' }
+  // Second-hour recap is blocked only when this edition already shipped. If
+  // nothing posted recently, the slot is genuinely empty and a recap is the
+  // difference between a late edition and no edition.
+  if (!stories.length && !ALLOW_RECAP && (await postedRecently(180))) {
+    return { skipped: 'nothing new, and this edition already posted' }
   }
 
   if (!stories.length) {
