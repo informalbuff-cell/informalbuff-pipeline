@@ -115,6 +115,8 @@ jobs:
           # Release-asset hosting needs the token; it is not exported by default.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Without this the reel renders silent — it happened on 27 Nov.
+          REEL_AUDIO: 'music/bed.mp3'
         run: |
           HOUR=$(date -u +%H)
           case "$HOUR" in
@@ -125,4 +127,8 @@ jobs:
           npm ci --prefer-offline --no-audit --no-fund
           node render.mjs --out out/reel.mp4 || { echo "render failed"; exit 0; }
           cd ..
+          # A silent reel is a broken reel; never publish one.
+          if ! ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 reel/out/reel.mp4 | grep -q audio; then
+            echo "reel has no audio stream — not publishing"; exit 0
+          fi
           node src/publish-reel.js || echo "reel publish failed — carousel already shipped"

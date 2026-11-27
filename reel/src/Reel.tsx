@@ -101,6 +101,7 @@ const Hook: React.FC<{ hook: string; kicker: string }> = ({ hook, kicker }) => {
 const StoryCard: React.FC<{ story: Story; index: number }> = ({ story, index }) => {
   const frame = useCurrentFrame()
   const wash = story.wash || WASH[index % WASH.length]
+  const title = fitTitle(story.title)
   // A slow drift keeps the frame alive without making text harder to read.
   const drift = interpolate(frame, [0, STORY_FRAMES], [0, -18], { extrapolateRight: 'clamp' })
   const pop = usePop(4)
@@ -113,17 +114,15 @@ const StoryCard: React.FC<{ story: Story; index: number }> = ({ story, index }) 
         <div
           style={{
             marginTop: 24,
-            fontSize: 62,
+            fontSize: title.size,
             lineHeight: 1.05,
             fontWeight: 900,
             color: INK,
             textTransform: 'uppercase',
             letterSpacing: -1,
-            maxHeight: 210,
-            overflow: 'hidden',
           }}
         >
-          {story.title}
+          {title.text}
         </div>
       </div>
 
@@ -224,6 +223,13 @@ const Progress: React.FC<{ total: number }> = ({ total }) => {
       <div style={{ width: `${pct * 100}%`, height: '100%', background: YELLOW }} />
     </div>
   )
+}
+
+/** Long headlines were clipping mid-line at 62px; scale down and cut cleanly. */
+function fitTitle(title: string) {
+  const clean = (title || '').replace(/\s+/g, ' ').trim()
+  const cut = clean.length > 96 ? `${clean.slice(0, 93).trimEnd()}…` : clean
+  return { text: cut, size: cut.length > 70 ? 46 : cut.length > 52 ? 52 : 62 }
 }
 
 export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle, site }) => {
