@@ -300,13 +300,24 @@ const HookFrame: React.FC<{ hook: string; image?: string }> = ({ hook, image }) 
             top: 0,
             left: 0,
             width: '100%',
-            height: '42%',
+            height: '40%',
             objectFit: 'cover',
             objectPosition: 'center 30%',
             transform: `scale(${zoom})`,
           }}
         />
       ) : null}
+      {/* Fade the band's lower edge so any card text under the crop disappears. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '26%',
+          left: 0,
+          right: 0,
+          height: '16%',
+          background: 'linear-gradient(180deg, rgba(8,8,12,0) 0%, rgba(8,8,12,0.85) 60%, #08080c 100%)',
+        }}
+      />
       <AbsoluteFill
         style={{
           background:
