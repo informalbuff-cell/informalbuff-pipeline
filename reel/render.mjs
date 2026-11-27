@@ -7,7 +7,7 @@
  * a carousel never disagree about the day's news.
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 const SITE = (process.env.SITE_URL || 'https://informalbuff.vercel.app').replace(/\/$/, '')
@@ -177,3 +177,20 @@ execFileSync(
 )
 
 console.log(`rendered ${OUT}`)
+
+/**
+ * When there is no payoff sentence the composition has five seconds of nothing
+ * before the CTA. Trim them off rather than hold on a static frame.
+ */
+const cleanPayoff = (props.payoff || '').replace(/\s+/g, ' ').trim()
+const payoffUseful =
+  cleanPayoff.length > 40 &&
+  cleanPayoff.slice(0, 40).toLowerCase() !== props.hook.slice(0, 40).toLowerCase() &&
+  !props.hook.toLowerCase().includes(cleanPayoff.slice(0, 40).toLowerCase())
+
+if (!payoffUseful) {
+  const trimmed = OUT.replace(/\.mp4$/, '-trim.mp4')
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', OUT, '-t', '25', '-c', 'copy', trimmed])
+  renameSync(trimmed, OUT)
+  console.log('trimmed 5s of empty payoff')
+}

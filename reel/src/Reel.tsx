@@ -455,6 +455,16 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
   const { durationInFrames } = useVideoConfig()
   const shown = stories.slice(0, 3)
 
+  // A payoff that just repeats the headline is dead weight — it showed the same
+  // title twice. Only show it when it says something the hook didn't.
+  const cleanPayoff = (payoff || '').replace(/\s+/g, ' ').trim()
+  const showPayoff =
+    cleanPayoff.length > 40 &&
+    cleanPayoff.slice(0, 40).toLowerCase() !== hook.slice(0, 40).toLowerCase() &&
+    !hook.toLowerCase().includes(cleanPayoff.slice(0, 40).toLowerCase())
+
+  const storiesEnd = HOOK_FRAMES + shown.length * STORY_FRAMES
+
   return (
     <AbsoluteFill style={{ background: INK, fontFamily: 'Inter, Helvetica, Arial, sans-serif' }}>
       {audio ? <Audio src={staticFile(audio)} volume={audioVolume ?? 1} /> : null}
@@ -474,13 +484,17 @@ export const Reel: React.FC<ReelProps> = ({ hook, kicker, stories, audio, handle
         </Sequence>
       ))}
 
-      <Sequence from={HOOK_FRAMES + shown.length * STORY_FRAMES} durationInFrames={PAYOFF_FRAMES}>
-        <Payoff line={(payoff || shown[0]?.line || hook).slice(0, 150)} />
-      </Sequence>
+      {showPayoff ? (
+        <Sequence from={storiesEnd} durationInFrames={PAYOFF_FRAMES}>
+          <Payoff line={cleanPayoff.slice(0, 150)} />
+        </Sequence>
+      ) : null}
 
       <Sequence
-        from={HOOK_FRAMES + shown.length * STORY_FRAMES + PAYOFF_FRAMES}
-        durationInFrames={CTA_FRAMES}
+        from={showPayoff ? storiesEnd + PAYOFF_FRAMES : storiesEnd}
+        durationInFrames={
+          showPayoff ? CTA_FRAMES : Math.max(CTA_FRAMES, durationInFrames - storiesEnd)
+        }
       >
         <CallToAction handle={handle} site={site} />
       </Sequence>
