@@ -30,7 +30,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
       CLOUDINARY_CLOUD: ${{ secrets.CLOUDINARY_CLOUD || 'sq9i1aty' }}
-      DRY_RUN: 'false'
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -131,6 +131,8 @@ jobs:
             00|01|07|08|12|13|15|16) ;;
             *) echo "not an edition window — no reel"; exit 0 ;;
           esac
+          # The runner image has no ffmpeg; the audio check and the trim need it.
+          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           cd reel
           npm ci --prefer-offline --no-audit --no-fund
           node render.mjs --out out/reel.mp4 || { echo "::error::reel render failed"; exit 1; }

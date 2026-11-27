@@ -216,8 +216,13 @@ const payoffUseful =
   !props.hook.toLowerCase().includes(cleanPayoff.slice(0, 40).toLowerCase())
 
 if (!payoffUseful) {
-  const trimmed = OUT.replace(/\.mp4$/, '-trim.mp4')
-  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', OUT, '-t', '25', '-c', 'copy', trimmed])
-  renameSync(trimmed, OUT)
-  console.log('trimmed 5s of empty payoff')
+  // Trimming is cosmetic. A runner without ffmpeg must still get its reel.
+  try {
+    const trimmed = OUT.replace(/\.mp4$/, '-trim.mp4')
+    execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', OUT, '-t', '25', '-c', 'copy', trimmed])
+    renameSync(trimmed, OUT)
+    console.log('trimmed 5s of empty payoff')
+  } catch (err) {
+    console.log(`kept the full ${'30'}s reel — trim unavailable: ${err.code || err.message}`)
+  }
 }
