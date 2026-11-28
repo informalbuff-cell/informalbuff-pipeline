@@ -82,6 +82,14 @@ jobs:
             -H "x-ingest-key: $INGEST_API_KEY" \
             "$SITE_URL/api/cron/autopublish" | head -c 400; echo
 
+      # Every article must carry a visual. Anything the writer left without a
+      # photo gets one from the source, or the generated card as a last resort.
+      - name: Ensure every article has an image
+        run: |
+          curl -s --max-time 240 -X POST \
+            -H "x-ingest-key: $INGEST_API_KEY" \
+            "$SITE_URL/api/admin/backfill-images" | head -c 400; echo
+
       - name: Push editions
         run: |
           HOUR=$(date -u +%H)
