@@ -1,19 +1,9 @@
 {
-  "note": "Meta Sound Collection beds, cleared for Facebook/Instagram. One track per day, rotating through the pool.",
-  "targetMeanDb": -12,
+  "note": "Only the two tracks the owner supplied, cleared for use. They alternate by slot so no two consecutive reels sound the same.",
+  "targetMeanDb": -13,
   "pool": [
-    { "file": "high_tension.m4a", "meanDb": -14.4, "mood": "urgent" },
-    { "file": "conflict.m4a", "meanDb": -14.8, "mood": "conflict" },
-    { "file": "disaster.m4a", "meanDb": -15.7, "mood": "serious" },
-    { "file": "zombie_empire.m4a", "meanDb": -16.3, "mood": "driving" },
-    { "file": "go_for_abyss.m4a", "meanDb": -16.8, "mood": "cinematic" }
+    { "file": "love.m4a", "meanDb": -15.0, "mood": "warm" },
+    { "file": "reflections.m4a", "meanDb": -14.8, "mood": "reflective" }
   ],
-  "surplus": [
-    { "file": "winter_frost.m4a", "meanDb": -15.5 },
-    { "file": "kiss_of_spring.m4a", "meanDb": -14.4 },
-    { "file": "dirty_reels_sound_-_listicle_.m4a", "meanDb": -12.6 },
-    { "file": "viral_camera_reels_sound_-_before_and_after_.m4a", "meanDb": -14.2 },
-    { "file": "hiphop_reels_sound_-_before_and_after_.m4a", "meanDb": -12.9 },
-    { "file": "summer_from_the_four_seasons_by_vivaldi_.m4a", "meanDb": -16.7 }
-  ]
+  "surplus": []
 }

@@ -27,8 +27,15 @@ function pickTrack() {
     const rotation = JSON.parse(readFileSync(rotationPath, 'utf8'))
     const pool = rotation.pool || []
     if (pool.length) {
+      // Slot-based, not day-based: with two tracks, alternating per edition is
+      // what keeps consecutive reels from sharing a bed.
+      const now = new Date()
       const dayNumber = Math.floor(Date.now() / 86400000)
-      const pick = pool[dayNumber % pool.length]
+      const hour = now.getUTCHours()
+      // 0 = morning, 1 = afternoon, 2 = evening, 3 = night, so the two beds
+      // alternate across the four daily slots instead of repeating.
+      const slot = hour <= 1 ? 0 : hour <= 8 ? 1 : hour <= 13 ? 2 : 3
+      const pick = pool[(dayNumber * 4 + slot) % pool.length]
       const gainDb = (rotation.targetMeanDb ?? -12) - (pick.meanDb ?? -15)
       const gain = Math.min(2, Math.max(0.5, Math.pow(10, gainDb / 20)))
       return { file: `music/library/${pick.file}`, gain, mood: pick.mood }
