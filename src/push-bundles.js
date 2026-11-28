@@ -93,6 +93,19 @@ async function waitFor(id) {
 
 
 /** Hand the published stories to the reel renderer, whichever path ran. */
+/** Mark this run as having published an edition, so the reel step may run. */
+function markEditionPublished(stories) {
+  if (DRY_RUN) return
+  try {
+    writeFileSync(
+      'edition-published.json',
+      JSON.stringify({ at: new Date().toISOString(), edition, count: stories.length }),
+    )
+  } catch (err) {
+    log(`could not write edition-published.json: ${err.message}`)
+  }
+}
+
 function recordBundle(stories) {
   try {
     writeFileSync(
@@ -136,6 +149,7 @@ async function pushDesk(desk) {
   log(`${desk}: ${stories.length} stories → ${images.length} images`)
 
   recordBundle(stories)
+  markEditionPublished(stories)
   if (DRY_RUN) return { desk, dryRun: true, count: images.length, caption: caption.slice(0, 80) }
   if (SKIP_META) return { desk, count: images.length, skippedMeta: true }
 
@@ -214,6 +228,7 @@ async function pushSignature() {
   log(`signature: ${stories.length} desks → ${stories.length} images`)
 
   recordBundle(stories)
+  markEditionPublished(stories)
   if (DRY_RUN) return { dryRun: true, count: stories.length }
   if (SKIP_META) return { count: stories.length, skippedMeta: true }
 
@@ -413,17 +428,9 @@ async function pushMixed() {
   log(`mixed: ${stories.length} stories across ${new Set(stories.map(s => s.category)).size} desks`)
 
   recordBundle(stories)
+  markEditionPublished(stories)
 
 
-  // A published edition, not a rehearsal: the reel step reads this file so a run
-  // that skipped the carousel cannot publish a stray reel.
-  if (!DRY_RUN) {
-    try {
-      writeFileSync('edition-published.json', JSON.stringify({ at: new Date().toISOString(), edition, count: stories.length }))
-    } catch (err) {
-      log(`could not write edition-published.json: ${err.message}`)
-    }
-  }
 
   if (DRY_RUN) return { dryRun: true, count: stories.length }
 
