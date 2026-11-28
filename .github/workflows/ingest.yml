@@ -138,6 +138,7 @@ jobs:
             echo "no edition published this run — no reel"
             exit 0
           fi
+          node -e "const f=require('fs').readFileSync('edition-published.json','utf8');const j=JSON.parse(f);if(Date.now()-new Date(j.at).getTime()>45*60000){process.exit(3)}" || { echo "edition flag is stale — no reel"; exit 0; }
           # The runner image has no ffmpeg; the audio check and the trim need it.
           command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           cd reel

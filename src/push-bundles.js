@@ -146,7 +146,10 @@ async function pushDesk(desk) {
   if (images.length === 1) {
     const c = await graph(`${meta.igUserId}/media`, { image_url: jpegUrl(images[0]), caption })
     await waitFor(c.id)
-    const p = await graph(`${meta.igUserId}/media_publish`, { creation_id: c.id })
+    const p = await withThrottleRetry(
+      () => graph(`${meta.igUserId}/media_publish`, { creation_id: c.id }),
+      'instagram publish',
+    )
     igId = p.id
   } else {
     const children = []
@@ -161,7 +164,10 @@ async function pushDesk(desk) {
       caption,
     })
     await waitFor(carousel.id)
-    const p = await graph(`${meta.igUserId}/media_publish`, { creation_id: carousel.id })
+    const p = await withThrottleRetry(
+      () => graph(`${meta.igUserId}/media_publish`, { creation_id: carousel.id }),
+      'instagram publish',
+    )
     igId = p.id
   }
 
@@ -329,6 +335,29 @@ async function lastPostedLead(minutes = 480) {
 const sameStory = (a, b) =>
   Boolean(a && b) && a.toLowerCase().slice(0, 38) === b.toLowerCase().slice(0, 38)
 
+
+/**
+ * Instagram's app-level throttle clears in minutes. Retrying with a growing
+ * wait turns a lost slot into a late one; without it the carousel is simply
+ * gone and only Facebook and Telegram get the edition.
+ */
+async function withThrottleRetry(fn, label, attempts = 3) {
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      const msg = String(err && err.message ? err.message : err)
+      if (!/limit reached|rate limit|too many/i.test(msg) || i === attempts - 1) throw err
+      const wait = 45 * (i + 1) * 1000
+      log(`${label}: throttled, waiting ${wait / 1000}s (attempt ${i + 1}/${attempts})`)
+      await new Promise((r) => setTimeout(r, wait))
+    }
+  }
+  throw lastErr
+}
+
 async function pushMixed() {
   const res = await fetch(`${SITE}/api/bundle?mixed=1&limit=10&platform=instagram&edition=${edition}`, {
     headers: { 'x-ingest-key': INGEST_KEY },
@@ -385,11 +414,23 @@ async function pushMixed() {
 
   recordBundle(stories)
 
+
+  // A published edition, not a rehearsal: the reel step reads this file so a run
+  // that skipped the carousel cannot publish a stray reel.
+  if (!DRY_RUN) {
+    try {
+      writeFileSync('edition-published.json', JSON.stringify({ at: new Date().toISOString(), edition, count: stories.length }))
+    } catch (err) {
+      log(`could not write edition-published.json: ${err.message}`)
+    }
+  }
+
   if (DRY_RUN) return { dryRun: true, count: stories.length }
 
   // The dense card is the image; the carousel is the story set, not a teaser.
   // Six slides: ten images is twenty API calls and that is what trips limits.
-  const images = stories.map((s) => s.cards.poster).slice(0, 6)
+  // Four slides: six images means twelve API calls and that is what trips Meta.
+  const images = stories.map((s) => s.cards.poster).slice(0, 4)
   const slugs = stories.map((s) => s.slug)
 
   let tg = null
